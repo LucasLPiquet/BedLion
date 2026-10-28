@@ -3,7 +3,8 @@ extends Node2D
 ## rodadas, placar e partida. Ganha a partida quem fizer PONTOS_PARA_VENCER.
 
 const Camaleao := preload("res://scripts/camaleao.gd")
-const ArmaNoChao := preload("res://scripts/arma_no_chao.gd")
+const LinguaNoChao := preload("res://scripts/lingua_no_chao.gd")
+const Linguas := preload("res://scripts/linguas.gd")
 const Cenario := preload("res://scripts/cenario.gd")
 const Placar := preload("res://scripts/placar.gd")
 
@@ -28,15 +29,14 @@ const OBSTACULOS := [
 	Rect2(560, 110, 160, 40),
 	Rect2(560, 570, 160, 40),
 ]
-## Armas extras espalhadas pelo mapa no começo de cada rodada.
-const ARMAS_EXTRAS := [Vector2(640, 360)]
+## Upgrades de língua que já estão no mapa no começo de cada rodada.
+const UPGRADES_NO_INICIO := [Vector2(640, 360)]
 
-## Arma melhor que aparece de tempos em tempos durante a rodada.
-const ARMA_MELHOR := "espingarda"
-const INTERVALO_ARMA_MELHOR := 10.0 # segundos entre uma aparição e outra
-const MAX_ARMAS_MELHORES := 2 # quantas podem estar no chão ao mesmo tempo
-## Lugares onde ela pode aparecer (sorteado a cada vez, sem repetir um ocupado).
-const PONTOS_ARMA_MELHOR := [
+## Upgrades de língua (sorteados entre os de linguas.gd) aparecem de tempos em tempos.
+const INTERVALO_UPGRADE := 10.0 # segundos entre uma aparição e outra
+const MAX_UPGRADES := 2 # quantos podem estar no chão ao mesmo tempo
+## Lugares onde eles podem aparecer (sorteado a cada vez, sem repetir um ocupado).
+const PONTOS_UPGRADE := [
 	Vector2(200, 130), Vector2(1080, 130), Vector2(200, 590), Vector2(1080, 590),
 	Vector2(640, 240), Vector2(640, 480), Vector2(500, 470), Vector2(780, 250),
 ]
@@ -168,7 +168,7 @@ func _escolher_jogadores() -> void:
 			como = "bot " + jogador["bot"]
 		partes.append("%s: %s" % [jogador["nome"], como])
 	partes.append("F1: %s" % NOMES_MODO_BOT[_modo_bot])
-	_rotulo_ajuda.text = "(atacar / invisível)    " + "    |    ".join(partes)
+	_rotulo_ajuda.text = "(golpe / invisível / língua)    " + "    |    ".join(partes)
 
 
 func _nova_partida() -> void:
@@ -192,15 +192,13 @@ func _nova_rodada() -> void:
 	_atualizar_placar()
 	_mostrar_mensagem("Rodada %d" % _numero_rodada, 1.2)
 
-	for posicao in ARMAS_EXTRAS:
-		var arma := ArmaNoChao.new()
-		arma.position = posicao
-		_rodada.add_child(arma)
+	for posicao in UPGRADES_NO_INICIO:
+		_criar_upgrade(posicao)
 
 	var relogio := Timer.new()
-	relogio.wait_time = INTERVALO_ARMA_MELHOR
+	relogio.wait_time = INTERVALO_UPGRADE
 	relogio.autostart = true
-	relogio.timeout.connect(_spawnar_arma_melhor)
+	relogio.timeout.connect(_spawnar_upgrade)
 	_rodada.add_child(relogio)
 
 	for i in _jogadores.size():
@@ -219,17 +217,17 @@ func _nova_rodada() -> void:
 		_vivos.append(camaleao)
 
 
-func _spawnar_arma_melhor() -> void:
+func _spawnar_upgrade() -> void:
 	if _rodada_acabou:
 		return
 	var no_chao: Array = []
 	for filho in _rodada.get_children():
-		if filho is ArmaNoChao and filho.tipo == ARMA_MELHOR:
+		if filho is LinguaNoChao:
 			no_chao.append(filho)
-	if no_chao.size() >= MAX_ARMAS_MELHORES:
+	if no_chao.size() >= MAX_UPGRADES:
 		return
 	var livres: Array = []
-	for ponto in PONTOS_ARMA_MELHOR:
+	for ponto in PONTOS_UPGRADE:
 		var ocupado := false
 		for existente in no_chao:
 			if existente.position.distance_to(ponto) < 40.0:
@@ -238,10 +236,14 @@ func _spawnar_arma_melhor() -> void:
 			livres.append(ponto)
 	if livres.is_empty():
 		return
-	var arma := ArmaNoChao.new()
-	arma.tipo = ARMA_MELHOR
-	arma.position = livres.pick_random()
-	_rodada.add_child(arma)
+	_criar_upgrade(livres.pick_random())
+
+
+func _criar_upgrade(posicao: Vector2) -> void:
+	var upgrade := LinguaNoChao.new()
+	upgrade.tipo = Linguas.UPGRADES.pick_random()
+	upgrade.position = posicao
+	_rodada.add_child(upgrade)
 
 
 func _ao_morrer(camaleao: Node) -> void:

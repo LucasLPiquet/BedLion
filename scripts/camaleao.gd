@@ -1,17 +1,21 @@
 extends CharacterBody2D
 ## Um camaleão controlado por um jogador (teclado ou controle) ou por um bot.
-## Com arma: o ataque joga a arma (bumerangue) ou atira, conforme armas.gd.
-## Sem arma (ou invisível): o ataque é um golpe curto de perto, na frente dele.
+## Dois ataques:
+## - Língua (só visível): sai reta da boca, vai até o alcance e volta. Se pegar
+##   outro camaleão, puxa ele até a boca. A língua sozinha não mata: é para trazer
+##   o outro para perto e dar o golpe. Enquanto ela está fora, quem lançou fica
+##   parado. Apertar de novo solta, e a língua fica RECARGA_SOLTAR segundos sem
+##   poder ser usada. Quem foi pego pode se soltar com a língua ou com o golpe,
+##   mas só depois de TEMPO_ATE_SE_SOLTAR.
+## - Golpe: curto, na frente dele; mata. Funciona visível e invisível, mas
+##   golpear faz ele aparecer de novo, então não dá para ficar batendo escondido.
 ## Invisível: segura o botão por TEMPO_PARA_SUMIR segundos para sumir para todos
-## (inclusive para o próprio jogador) e solta a arma no chão. Golpear faz ele
-## aparecer de novo, então não dá para ficar batendo escondido.
+## (inclusive para o próprio jogador). Se tiver um upgrade de língua, ele cai no chão.
 
 signal morreu(camaleao)
 
-const Bala := preload("res://scripts/bala.gd")
-const ArmaLancada := preload("res://scripts/arma_lancada.gd")
-const ArmaNoChao := preload("res://scripts/arma_no_chao.gd")
-const Armas := preload("res://scripts/armas.gd")
+const Linguas := preload("res://scripts/linguas.gd")
+const LinguaNoChao := preload("res://scripts/lingua_no_chao.gd")
 const EfeitoGolpe := preload("res://scripts/efeito_golpe.gd")
 const EfeitoMorte := preload("res://scripts/efeito_morte.gd")
 const Desenho := preload("res://scripts/desenho_camaleao.gd")
@@ -25,6 +29,20 @@ const ALCANCE_GOLPE := 70.0
 ## Quem estiver colado (menos de 2 raios) é acertado de qualquer lado.
 const ANGULO_GOLPE := 1.3
 const RECARGA_GOLPE := 0.5
+## Espera da língua depois de voltar sozinha (errou ou terminou de puxar).
+const RECARGA_LINGUA := 0.3
+## Espera da língua quando ela é solta antes da hora: por quem lançou, por quem
+## foi pego ou porque alguém cortou.
+const RECARGA_SOLTAR := 1.0
+## Quem é puxado só consegue se soltar depois de tantos segundos.
+const TEMPO_ATE_SE_SOLTAR := 0.25
+## A puxada termina quando os dois ficam a esta distância (centro a centro).
+## É menos que ALCANCE_GOLPE, então dá para golpear logo em seguida.
+const DISTANCIA_FIM_PUXADA := 42.0
+## Tamanho da ponta da língua para pegar alguém.
+const RAIO_PONTA := 7.0
+## Se um terceiro camaleão passar por cima da língua esticada, ela é cortada.
+const LINGUA_PODE_SER_CORTADA := true
 ## Quanto tempo segurar o botão de invisível para sumir (soltar antes cancela).
 const TEMPO_PARA_SUMIR := 1.0
 ## Depois de aparecer, quanto esperar para poder começar a sumir de novo.
@@ -33,26 +51,40 @@ const RECARGA_INVISIBILIDADE := 0.5
 var controle := "teclado1" # prefixo das ações em controles.gd
 var bot := "" # "" = jogador de verdade; "parado" ou "andando" = bot de teste
 var cor := Color.WHITE
-var mundo: Node # onde balas e armas soltas são criadas
+var mundo: Node # onde efeitos e upgrades largados são criados
 
 var direcao := Vector2.RIGHT
-var arma := "pistola" # "" = desarmado; tipos em armas.gd
-var municao := -1 # -1 = infinita
+var lingua := Linguas.BASICA # tipo em linguas.gd
 var invisivel := false
 var vivo := true
+var puxado_por: Node = null # quem está puxando este camaleão com a língua
 
-var _recarga_tiro := 0.0
 var _recarga_golpe := 0.0
+var _recarga_lingua := 0.0
 var _recarga_invisibilidade := 0.0
 var _carga_invisivel := 0.0 # segundos segurando o botão para sumir
 var _olhando_direita := true
 var _passo := 0.0 # animação de andar
 
+# Língua lançada por este camaleão.
+var _estado_lingua := "" # "" = na boca; "indo", "voltando" ou "puxando"
+var _ponta := Vector2.ZERO # posição da ponta, no mundo
+var _percorrido := 0.0
+var _dados_lingua: Dictionary = {} # números da língua no momento em que saiu
+var _preso: Node = null # quem a língua pegou
+var _tempo_puxando := 0.0
+var _desenho_lingua: Node2D # desenha a língua por cima de todos os camaleões
+
+# Quando é este camaleão que está sendo puxado.
+var _velocidade_puxada := 0.0
+var _tempo_puxado := 0.0
+
 # Decisão atual do bot (ele repensa algumas vezes por segundo).
 var _bot_tempo := 0.0
 var _bot_mover := Vector2.ZERO
 var _bot_mirar := Vector2.ZERO
-var _bot_atirar := false
+var _bot_golpear := false
+var _bot_lingua := false
 
 
 func _ready() -> void:
@@ -65,36 +97,56 @@ func _ready() -> void:
 	add_child(forma)
 	add_to_group("camaleoes")
 	_olhando_direita = direcao.x >= 0.0
+	_desenho_lingua = Node2D.new()
+	_desenho_lingua.z_index = 1
+	_desenho_lingua.draw.connect(_desenhar_lingua)
+	add_child(_desenho_lingua)
 
 
 func _physics_process(delta: float) -> void:
 	if not vivo:
 		return
-	_recarga_tiro -= delta
 	_recarga_golpe -= delta
+	_recarga_lingua -= delta
 	_recarga_invisibilidade -= delta
 
 	var entrada := Vector2.ZERO
-	var quer_atacar := false
+	var quer_golpear := false
+	var quer_lingua := false
 	var apertou_invisivel := false
 	var segurando_invisivel := false
 	if bot != "":
 		_pensar_bot(delta)
 		entrada = _bot_mover
-		quer_atacar = _bot_atirar
-		_bot_atirar = false
+		quer_golpear = _bot_golpear
+		quer_lingua = _bot_lingua
+		_bot_golpear = false
+		_bot_lingua = false
 	else:
 		entrada = Input.get_vector(
 			controle + "_esquerda", controle + "_direita", controle + "_cima", controle + "_baixo"
 		)
-		quer_atacar = Input.is_action_just_pressed(controle + "_atacar")
+		quer_golpear = Input.is_action_just_pressed(controle + "_golpe")
+		quer_lingua = Input.is_action_just_pressed(controle + "_lingua")
 		apertou_invisivel = Input.is_action_just_pressed(controle + "_invisivel")
 		segurando_invisivel = Input.is_action_pressed(controle + "_invisivel")
 
-	if entrada != Vector2.ZERO:
-		direcao = entrada.normalized()
-	if _bot_mirar != Vector2.ZERO:
-		direcao = _bot_mirar
+	if _sendo_puxado():
+		_ser_arrastado(delta, quer_golpear or quer_lingua, quer_golpear)
+		return
+
+	if _estado_lingua != "":
+		# Com a língua fora fica parado; apertar a língua de novo solta.
+		entrada = Vector2.ZERO
+		quer_golpear = false
+		if quer_lingua:
+			soltar_lingua(RECARGA_SOLTAR)
+			quer_lingua = false
+	else:
+		if entrada != Vector2.ZERO:
+			direcao = entrada.normalized()
+		if _bot_mirar != Vector2.ZERO:
+			direcao = _bot_mirar
 	if absf(direcao.x) > 0.1:
 		_olhando_direita = direcao.x > 0.0
 	velocity = entrada * VELOCIDADE
@@ -102,20 +154,26 @@ func _physics_process(delta: float) -> void:
 	_passo = _passo + delta * 14.0 if entrada != Vector2.ZERO else 0.0
 
 	_controlar_invisibilidade(delta, apertou_invisivel, segurando_invisivel)
-	if quer_atacar:
-		_atacar()
+	if quer_golpear:
+		_golpear()
+	if quer_lingua:
+		_lancar_lingua()
+	_mover_lingua(delta)
 	queue_redraw()
+	_desenho_lingua.queue_redraw()
 
 
 ## Invisível: um toque no botão faz aparecer na hora.
 ## Visível: precisa segurar o botão; a carga só começa com um aperto novo,
 ## então segurar depois de aparecer não faz sumir de novo sozinho.
+## Com a língua fora não dá para começar a sumir.
 func _controlar_invisibilidade(delta: float, apertou: bool, segurando: bool) -> void:
 	if invisivel:
 		if apertou:
 			_aparecer()
 		return
-	var carregando := segurando and _recarga_invisibilidade <= 0.0 and (apertou or _carga_invisivel > 0.0)
+	var carregando := segurando and _estado_lingua == "" and _recarga_invisibilidade <= 0.0 \
+		and (apertou or _carga_invisivel > 0.0)
 	_carga_invisivel = _carga_invisivel + delta if carregando else 0.0
 	if _carga_invisivel >= TEMPO_PARA_SUMIR:
 		_sumir()
@@ -127,9 +185,9 @@ func _sumir() -> void:
 	_carga_invisivel = 0.0
 	invisivel = true
 	visible = false
-	if arma != "":
-		_largar_arma(arma, municao)
-		arma = ""
+	if lingua != Linguas.BASICA:
+		_largar_upgrade()
+		lingua = Linguas.BASICA
 
 
 func _aparecer() -> void:
@@ -139,56 +197,159 @@ func _aparecer() -> void:
 	_recarga_invisibilidade = RECARGA_INVISIBILIDADE
 
 
-func _atacar() -> void:
-	if invisivel or arma == "":
-		_golpear()
-	elif Armas.TIPOS[arma]["modo"] == "arremesso":
-		_arremessar()
-	else:
-		_atirar()
+# --- Língua -----------------------------------------------------------------
+
+func _boca() -> Vector2:
+	return position + Desenho.boca(_olhando_direita)
 
 
-func _arremessar() -> void:
-	var lancada := ArmaLancada.new()
-	lancada.tipo = arma
-	lancada.municao = municao
-	lancada.dono = self
-	lancada.direcao = direcao
-	lancada.position = position + Desenho.ponta_da_arma(direcao, _olhando_direita)
-	mundo.add_child(lancada)
-	arma = ""
-
-
-## Chamado pela arma jogada quando ela volta para a mão.
-func receber_arma_de_volta(tipo: String, restante: int) -> void:
-	arma = tipo
-	municao = restante
-
-
-func _atirar() -> void:
-	if _recarga_tiro > 0.0:
+func _lancar_lingua() -> void:
+	if invisivel or _estado_lingua != "" or _recarga_lingua > 0.0:
 		return
-	var dados: Dictionary = Armas.TIPOS[arma]
-	_recarga_tiro = dados["recarga"]
-	var quantidade: int = dados["balas"]
-	var espalhamento: float = dados["espalhamento"]
-	for i in quantidade:
-		# Distribui as balas igualmente dentro do leque (uma só sai reta).
-		var angulo := 0.0
-		if quantidade > 1:
-			angulo = lerpf(-espalhamento / 2.0, espalhamento / 2.0, float(i) / (quantidade - 1))
-		var bala := Bala.new()
-		bala.dono = self
-		bala.direcao = direcao.rotated(angulo)
-		bala.alcance = dados["alcance"]
-		bala.velocidade = dados["velocidade"]
-		bala.position = position + Desenho.ponta_da_arma(direcao, _olhando_direita)
-		mundo.add_child(bala)
-	if municao > 0:
-		municao -= 1
-		if municao == 0:
-			arma = ""
+	_dados_lingua = Linguas.TIPOS[lingua]
+	_estado_lingua = "indo"
+	_ponta = _boca()
+	_percorrido = 0.0
+	_carga_invisivel = 0.0
 
+
+func _mover_lingua(delta: float) -> void:
+	match _estado_lingua:
+		"indo":
+			var passo: float = _dados_lingua["velocidade"] * delta
+			var nova := _ponta + direcao * passo
+			if _bate_em_parede(_ponta, nova):
+				_estado_lingua = "voltando"
+				return
+			var pego := _camaleao_no_caminho(_ponta, nova)
+			_ponta = nova
+			_percorrido += passo
+			if pego:
+				_comecar_puxada(pego)
+			elif _percorrido >= _dados_lingua["alcance"]:
+				_estado_lingua = "voltando"
+		"voltando":
+			var passo: float = _dados_lingua["velocidade"] * delta
+			var boca := _boca()
+			if _ponta.distance_to(boca) <= passo:
+				soltar_lingua(RECARGA_LINGUA)
+			else:
+				_ponta = _ponta.move_toward(boca, passo)
+		"puxando":
+			if not (is_instance_valid(_preso) and _preso.vivo):
+				soltar_lingua(RECARGA_LINGUA)
+				return
+			_ponta = _preso.position
+			_tempo_puxando += delta
+			# Chegou perto (ou ficou preso numa quina por tempo demais): acabou a puxada.
+			if position.distance_to(_preso.position) <= DISTANCIA_FIM_PUXADA \
+					or _tempo_puxando >= _dados_lingua["tempo_puxada"] + 0.4:
+				soltar_lingua(RECARGA_LINGUA)
+			elif LINGUA_PODE_SER_CORTADA and _alguem_cortou():
+				soltar_lingua(RECARGA_SOLTAR)
+
+
+func _bate_em_parede(de: Vector2, ate: Vector2) -> bool:
+	var consulta := PhysicsRayQueryParameters2D.create(de, ate, 1) # 1 = paredes
+	return not get_world_2d().direct_space_state.intersect_ray(consulta).is_empty()
+
+
+## Primeiro camaleão (que não seja ele e não esteja sendo puxado) que a ponta
+## encosta indo de "de" até "ate". Pega invisíveis também, e eles aparecem.
+func _camaleao_no_caminho(de: Vector2, ate: Vector2) -> Node:
+	var melhor: Node = null
+	var melhor_distancia := INF
+	for outro in get_tree().get_nodes_in_group("camaleoes"):
+		if outro == self or not outro.vivo or outro._sendo_puxado():
+			continue
+		var perto := Geometry2D.get_closest_point_to_segment(outro.position, de, ate)
+		if perto.distance_to(outro.position) <= RAIO + RAIO_PONTA:
+			var distancia := de.distance_to(perto)
+			if distancia < melhor_distancia:
+				melhor = outro
+				melhor_distancia = distancia
+	return melhor
+
+
+func _comecar_puxada(alvo: Node) -> void:
+	_estado_lingua = "puxando"
+	_preso = alvo
+	_tempo_puxando = 0.0
+	# Velocidade para chegar em tempo_puxada segundos, seja de longe ou de perto.
+	var falta := maxf(position.distance_to(alvo.position) - DISTANCIA_FIM_PUXADA, 10.0)
+	alvo.ser_puxado(self, falta / _dados_lingua["tempo_puxada"])
+
+
+## Um terceiro camaleão encostando na língua esticada corta ela.
+func _alguem_cortou() -> bool:
+	var boca := _boca()
+	for outro in get_tree().get_nodes_in_group("camaleoes"):
+		if outro == self or outro == _preso or not outro.vivo:
+			continue
+		var perto := Geometry2D.get_closest_point_to_segment(outro.position, boca, _preso.position)
+		if perto.distance_to(outro.position) <= RAIO:
+			return true
+	return false
+
+
+## Recolhe a língua na hora (soltando quem estiver preso nela).
+func soltar_lingua(recarga: float) -> void:
+	if _estado_lingua == "":
+		return
+	if is_instance_valid(_preso) and _preso.puxado_por == self:
+		_preso.puxado_por = null
+	_preso = null
+	_estado_lingua = ""
+	_recarga_lingua = recarga
+	_desenho_lingua.queue_redraw()
+
+
+## Chamado pela língua de outro camaleão quando ela pega este.
+func ser_puxado(quem: Node, velocidade: float) -> void:
+	soltar_lingua(RECARGA_SOLTAR) # se a língua dele estava fora, ela solta
+	if invisivel:
+		_aparecer()
+	_carga_invisivel = 0.0
+	modulate.a = 1.0
+	puxado_por = quem
+	_velocidade_puxada = velocidade
+	_tempo_puxado = 0.0
+
+
+func _sendo_puxado() -> bool:
+	if puxado_por != null and not (is_instance_valid(puxado_por) and puxado_por.vivo):
+		puxado_por = null
+	return puxado_por != null
+
+
+## Enquanto é puxado: vai em direção a quem puxou, sem poder andar.
+## Depois de TEMPO_ATE_SE_SOLTAR, apertar língua ou golpe solta (o golpe também bate).
+func _ser_arrastado(delta: float, tentou_soltar: bool, golpeou: bool) -> void:
+	_tempo_puxado += delta
+	# Fica virado para quem puxa, então o golpe ao se soltar vai na direção dele.
+	var para_quem_puxa := position.direction_to(puxado_por.position)
+	if para_quem_puxa != Vector2.ZERO:
+		direcao = para_quem_puxa
+	if absf(direcao.x) > 0.1:
+		_olhando_direita = direcao.x > 0.0
+	velocity = para_quem_puxa * _velocidade_puxada
+	move_and_slide()
+	_passo = 0.0
+	if tentou_soltar and _tempo_puxado >= TEMPO_ATE_SE_SOLTAR:
+		puxado_por.soltar_lingua(RECARGA_SOLTAR)
+		if golpeou:
+			_golpear()
+	queue_redraw()
+
+
+func _desenhar_lingua() -> void:
+	if _estado_lingua == "":
+		return
+	var cor_ponta: Color = Linguas.ROSA if lingua == Linguas.BASICA else Linguas.TIPOS[lingua]["cor"]
+	Linguas.desenhar(_desenho_lingua, Desenho.boca(_olhando_direita), to_local(_ponta), cor_ponta)
+
+
+# --- Golpe ------------------------------------------------------------------
 
 func _golpear() -> void:
 	if _recarga_golpe > 0.0:
@@ -216,24 +377,19 @@ func _golpear() -> void:
 	mundo.add_child(efeito)
 
 
-## Chamado pela arma no chão. Só dá para pegar estando visível, e só se estiver
-## desarmado ou se a arma do chão for melhor (aí a atual fica no chão).
-func pegar_arma(no_chao: Node) -> bool:
-	if not vivo or invisivel:
+# --- Upgrades de língua -----------------------------------------------------
+
+## Chamado pelo upgrade no chão. Só dá para pegar estando visível e com a língua básica.
+func pegar_upgrade(no_chao: Node) -> bool:
+	if not vivo or invisivel or lingua != Linguas.BASICA:
 		return false
-	if arma != "" and Armas.TIPOS[no_chao.tipo]["nivel"] <= Armas.TIPOS[arma]["nivel"]:
-		return false
-	if arma != "":
-		_largar_arma.call_deferred(arma, municao)
-	arma = no_chao.tipo
-	municao = no_chao.municao
+	lingua = no_chao.tipo
 	return true
 
 
-func _largar_arma(tipo: String, restante: int) -> void:
-	var no_chao := ArmaNoChao.new()
-	no_chao.tipo = tipo
-	no_chao.municao = restante
+func _largar_upgrade() -> void:
+	var no_chao := LinguaNoChao.new()
+	no_chao.tipo = lingua
 	no_chao.position = position
 	mundo.add_child(no_chao)
 
@@ -241,6 +397,9 @@ func _largar_arma(tipo: String, restante: int) -> void:
 func morrer() -> void:
 	if not vivo:
 		return
+	soltar_lingua(RECARGA_LINGUA)
+	if _sendo_puxado():
+		puxado_por.soltar_lingua(RECARGA_LINGUA)
 	vivo = false
 	var efeito := EfeitoMorte.new()
 	efeito.position = position
@@ -251,8 +410,8 @@ func morrer() -> void:
 
 
 # --- Bot de teste -----------------------------------------------------------
-# Bem simples: pega uma arma se estiver desarmado, chega a uma distância média
-# do inimigo visível mais perto, anda de lado e atira com um pouco de erro.
+# Bem simples: anda até o inimigo visível mais perto, joga a língua quando ele
+# está no alcance e golpeia quando está perto. Se for pego, tenta se soltar.
 
 func _pensar_bot(delta: float) -> void:
 	_bot_tempo -= delta
@@ -263,26 +422,23 @@ func _pensar_bot(delta: float) -> void:
 	if bot == "parado":
 		_bot_mover = Vector2.ZERO
 		return
+	if _sendo_puxado():
+		_bot_golpear = randf() < 0.5
+		return
 
 	var travado := _bot_mover != Vector2.ZERO and get_real_velocity().length() < VELOCIDADE * 0.3
 	var alvo := _mais_perto(_inimigos_visiveis())
-	if arma == "":
-		var arma_perto := _mais_perto(get_tree().get_nodes_in_group("armas_no_chao"))
-		if arma_perto:
-			_bot_mover = position.direction_to(arma_perto.position)
-		else:
-			_bot_mover = Vector2.from_angle(randf() * TAU)
-	elif alvo:
+	if alvo:
 		var para_alvo := alvo.position - position
 		var distancia := para_alvo.length()
-		if distancia > 280.0:
-			_bot_mover = para_alvo.normalized()
-		elif distancia < 150.0:
-			_bot_mover = -para_alvo.normalized()
+		_bot_mirar = para_alvo.normalized().rotated(randf_range(-0.15, 0.15))
+		if distancia < ALCANCE_GOLPE * 0.9:
+			_bot_mover = Vector2.ZERO
+			_bot_golpear = true
 		else:
-			_bot_mover = para_alvo.normalized().orthogonal() * (1.0 if randf() < 0.5 else -1.0)
-		_bot_mirar = para_alvo.normalized().rotated(randf_range(-0.25, 0.25))
-		_bot_atirar = distancia < 500.0 and randf() < 0.5
+			_bot_mover = para_alvo.normalized()
+			var alcance: float = Linguas.TIPOS[lingua]["alcance"]
+			_bot_lingua = _estado_lingua == "" and distancia < alcance and randf() < 0.4
 	else:
 		_bot_mover = Vector2.from_angle(randf() * TAU)
 	if travado:
@@ -307,7 +463,12 @@ func _mais_perto(nos: Array) -> Node2D:
 
 func _draw() -> void:
 	var escala := Vector2.ONE * Desenho.ESCALA_JOGO
-	Desenho.desenhar(self, Transform2D(0.0, escala, 0.0, Vector2.ZERO), cor, direcao, _olhando_direita, arma, _passo)
+	Desenho.desenhar(self, Transform2D(0.0, escala, 0.0, Vector2.ZERO), cor, direcao, _olhando_direita, _passo)
+	if lingua != Linguas.BASICA:
+		# Bolinha em cima da cabeça com a cor do upgrade de língua.
+		var cor_upgrade: Color = Linguas.TIPOS[lingua]["cor"]
+		draw_circle(Vector2(0, -42), 6.0, Linguas.CONTORNO)
+		draw_circle(Vector2(0, -42), 4.5, cor_upgrade)
 	if _carga_invisivel > 0.0:
 		# Anel que vai se completando enquanto o botão de invisível é segurado.
 		var t := _carga_invisivel / TEMPO_PARA_SUMIR
