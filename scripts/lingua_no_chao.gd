@@ -47,5 +47,5 @@ func _draw() -> void:
 	else:
 		Linguas.desenhar(self, Vector2(-4, 4), Vector2(5, -3), cor, 3.0)
 		for i in 2:
-			var y := -3.0 + i * 5.0
+			var y: float = -3.0 + i * 5.0
 			draw_line(Vector2(-10, y), Vector2(-6, y), Linguas.CONTORNO, 1.5, true)
