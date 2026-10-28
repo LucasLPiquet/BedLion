@@ -18,6 +18,16 @@ const OBSTACULOS := [
 ## Armas extras espalhadas pelo mapa no começo de cada rodada.
 const ARMAS_EXTRAS := [Vector2(640, 360)]
 
+## Arma melhor que aparece de tempos em tempos durante a rodada.
+const ARMA_MELHOR := "espingarda"
+const INTERVALO_ARMA_MELHOR := 10.0 # segundos entre uma aparição e outra
+const MAX_ARMAS_MELHORES := 2 # quantas podem estar no chão ao mesmo tempo
+## Lugares onde ela pode aparecer (sorteado a cada vez, sem repetir um ocupado).
+const PONTOS_ARMA_MELHOR := [
+	Vector2(200, 130), Vector2(1080, 130), Vector2(200, 590), Vector2(1080, 590),
+	Vector2(640, 240), Vector2(640, 480), Vector2(500, 470), Vector2(780, 250),
+]
+
 const JOGADORES := [
 	{"prefixo": "p1", "nome": "Verde", "cor": Color(0.35, 0.85, 0.4), "inicio": Vector2(160, 360)},
 	{"prefixo": "p2", "nome": "Laranja", "cor": Color(0.95, 0.55, 0.2), "inicio": Vector2(1120, 360)},
@@ -111,6 +121,12 @@ func _nova_rodada() -> void:
 		arma.position = posicao
 		_rodada.add_child(arma)
 
+	var relogio := Timer.new()
+	relogio.wait_time = INTERVALO_ARMA_MELHOR
+	relogio.autostart = true
+	relogio.timeout.connect(_spawnar_arma_melhor)
+	_rodada.add_child(relogio)
+
 	for i in JOGADORES.size():
 		var dados: Dictionary = JOGADORES[i]
 		var camaleao := Camaleao.new()
@@ -123,6 +139,31 @@ func _nova_rodada() -> void:
 		camaleao.morreu.connect(_ao_morrer)
 		_rodada.add_child(camaleao)
 		_vivos.append(camaleao)
+
+
+func _spawnar_arma_melhor() -> void:
+	if _rodada_acabou:
+		return
+	var no_chao: Array = []
+	for filho in _rodada.get_children():
+		if filho is ArmaNoChao and filho.tipo == ARMA_MELHOR:
+			no_chao.append(filho)
+	if no_chao.size() >= MAX_ARMAS_MELHORES:
+		return
+	var livres: Array = []
+	for ponto in PONTOS_ARMA_MELHOR:
+		var ocupado := false
+		for existente in no_chao:
+			if existente.position.distance_to(ponto) < 40.0:
+				ocupado = true
+		if not ocupado:
+			livres.append(ponto)
+	if livres.is_empty():
+		return
+	var arma := ArmaNoChao.new()
+	arma.tipo = ARMA_MELHOR
+	arma.position = livres.pick_random()
+	_rodada.add_child(arma)
 
 
 func _ao_morrer(camaleao: Node) -> void:
