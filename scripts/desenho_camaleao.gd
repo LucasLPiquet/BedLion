@@ -1,10 +1,8 @@
 extends RefCounted
 ## Desenha um camaleão fofo só com formas (sem imagem): corpo redondo, olhos
-## grandes de pálpebra caída, cauda em espiral e a mão segurando a arma.
+## grandes de pálpebra caída, cauda em espiral e a mão apontando para onde ele mira.
 ## Inspirado no desenho em arte/referencia_camaleao.jpg.
 ## Tudo é desenhado virado para a direita e espelhado quando ele olha para a esquerda.
-
-const Armas := preload("res://scripts/armas.gd")
 
 const CONTORNO := Color(0.08, 0.07, 0.1)
 const LARGURA := 2.0
@@ -14,10 +12,10 @@ const ESCALA_JOGO := 1.2
 
 ## item: o nó que está desenhando (dentro do _draw dele).
 ## base: posição e escala do camaleão dentro do item.
-## mira: direção para onde ele olha e aponta a arma.
-## passo: fase da animação de andar (0 = parado). arma: "" quando desarmado.
+## mira: direção para onde ele olha e aponta a mão.
+## passo: fase da animação de andar (0 = parado).
 static func desenhar(item: CanvasItem, base: Transform2D, cor: Color, mira: Vector2,
-		olhando_direita: bool, arma: String, passo: float) -> void:
+		olhando_direita: bool, passo: float) -> void:
 	var lado := 1.0 if olhando_direita else -1.0
 	var escuro := cor.darkened(0.3)
 	var claro := cor.lightened(0.4)
@@ -54,24 +52,20 @@ static func desenhar(item: CanvasItem, base: Transform2D, cor: Color, mira: Vect
 	_olho(item, Vector2(16, -15.5), 4.5, cor, mira_local) # olho de longe
 	_olho(item, Vector2(5, -14), 6.5, cor, mira_local) # olho de perto
 
-	# Braço, arma e por fim a mão por cima do cabo.
+	# Braço e mão.
 	var ombro := Vector2(3, 3)
 	var mao := ombro + mira_local * 11.0
 	item.draw_line(ombro, mao, CONTORNO, 6.5, true)
 	item.draw_line(ombro, mao, cor, 3.5, true)
-	if arma != "":
-		Armas.desenhar(item, arma, corpo * Transform2D(mira_local.angle(), mao))
-		item.draw_set_transform_matrix(corpo)
 	item.draw_circle(mao, 4.2, CONTORNO)
 	item.draw_circle(mao, 3.0, cor)
 
 	item.draw_set_transform_matrix(Transform2D.IDENTITY)
 
 
-## Onde sai a bala, em relação ao centro do camaleão.
-static func ponta_da_arma(mira: Vector2, olhando_direita: bool) -> Vector2:
-	var ombro := Vector2(3.0 if olhando_direita else -3.0, 3.0)
-	return (ombro + mira.normalized() * 26.0) * ESCALA_JOGO
+## Onde sai a língua (o canto da boca), em relação ao centro do camaleão.
+static func boca(olhando_direita: bool) -> Vector2:
+	return Vector2(19.0 if olhando_direita else -19.0, -6.0) * ESCALA_JOGO
 
 
 static func _cauda(item: CanvasItem, cor: Color) -> void:
