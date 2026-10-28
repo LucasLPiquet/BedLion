@@ -1,12 +1,15 @@
 extends CharacterBody2D
 ## Um camaleão controlado por um jogador (teclado ou controle) ou por um bot.
-## Visível: anda e atira com a arma (se tiver uma).
-## Invisível: some para todos (inclusive para o próprio jogador), solta a arma
-## no chão e o ataque vira um golpe que mata quem estiver perto.
+## Com arma: o ataque joga a arma (bumerangue) ou atira, conforme armas.gd.
+## Sem arma (ou invisível): o ataque é um golpe curto de perto, na frente dele.
+## Invisível: segura o botão por TEMPO_PARA_SUMIR segundos para sumir para todos
+## (inclusive para o próprio jogador) e solta a arma no chão. Golpear faz ele
+## aparecer de novo, então não dá para ficar batendo escondido.
 
 signal morreu(camaleao)
 
 const Bala := preload("res://scripts/bala.gd")
+const ArmaLancada := preload("res://scripts/arma_lancada.gd")
 const ArmaNoChao := preload("res://scripts/arma_no_chao.gd")
 const Armas := preload("res://scripts/armas.gd")
 const EfeitoGolpe := preload("res://scripts/efeito_golpe.gd")
@@ -16,9 +19,15 @@ const Desenho := preload("res://scripts/desenho_camaleao.gd")
 const VELOCIDADE := 260.0
 const RAIO := 18.0
 ## Distância máxima entre os centros dos dois camaleões para o golpe matar.
-## Cada camaleão tem raio 18, então 75 deixa uns 40 px de folga entre eles.
-const ALCANCE_GOLPE := 75.0
-const RECARGA_GOLPE := 0.4
+## Cada camaleão tem raio 18, então 70 deixa uns 35 px de folga entre eles.
+const ALCANCE_GOLPE := 70.0
+## Abertura do golpe para cada lado da direção em que ele olha (1.3 rad = uns 75°).
+## Quem estiver colado (menos de 2 raios) é acertado de qualquer lado.
+const ANGULO_GOLPE := 1.3
+const RECARGA_GOLPE := 0.5
+## Quanto tempo segurar o botão de invisível para sumir (soltar antes cancela).
+const TEMPO_PARA_SUMIR := 1.0
+## Depois de aparecer, quanto esperar para poder começar a sumir de novo.
 const RECARGA_INVISIBILIDADE := 0.5
 
 var controle := "teclado1" # prefixo das ações em controles.gd
@@ -35,6 +44,7 @@ var vivo := true
 var _recarga_tiro := 0.0
 var _recarga_golpe := 0.0
 var _recarga_invisibilidade := 0.0
+var _carga_invisivel := 0.0 # segundos segurando o botão para sumir
 var _olhando_direita := true
 var _passo := 0.0 # animação de andar
 
@@ -66,7 +76,8 @@ func _physics_process(delta: float) -> void:
 
 	var entrada := Vector2.ZERO
 	var quer_atacar := false
-	var quer_invisivel := false
+	var apertou_invisivel := false
+	var segurando_invisivel := false
 	if bot != "":
 		_pensar_bot(delta)
 		entrada = _bot_mover
@@ -77,7 +88,8 @@ func _physics_process(delta: float) -> void:
 			controle + "_esquerda", controle + "_direita", controle + "_cima", controle + "_baixo"
 		)
 		quer_atacar = Input.is_action_just_pressed(controle + "_atacar")
-		quer_invisivel = Input.is_action_just_pressed(controle + "_invisivel")
+		apertou_invisivel = Input.is_action_just_pressed(controle + "_invisivel")
+		segurando_invisivel = Input.is_action_pressed(controle + "_invisivel")
 
 	if entrada != Vector2.ZERO:
 		direcao = entrada.normalized()
@@ -89,29 +101,68 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	_passo = _passo + delta * 14.0 if entrada != Vector2.ZERO else 0.0
 
-	if quer_invisivel:
-		_alternar_invisibilidade()
+	_controlar_invisibilidade(delta, apertou_invisivel, segurando_invisivel)
 	if quer_atacar:
 		_atacar()
 	queue_redraw()
 
 
-func _alternar_invisibilidade() -> void:
-	if _recarga_invisibilidade > 0.0:
+## Invisível: um toque no botão faz aparecer na hora.
+## Visível: precisa segurar o botão; a carga só começa com um aperto novo,
+## então segurar depois de aparecer não faz sumir de novo sozinho.
+func _controlar_invisibilidade(delta: float, apertou: bool, segurando: bool) -> void:
+	if invisivel:
+		if apertou:
+			_aparecer()
 		return
-	_recarga_invisibilidade = RECARGA_INVISIBILIDADE
-	invisivel = not invisivel
-	visible = not invisivel
-	if invisivel and arma != "":
+	var carregando := segurando and _recarga_invisibilidade <= 0.0 and (apertou or _carga_invisivel > 0.0)
+	_carga_invisivel = _carga_invisivel + delta if carregando else 0.0
+	if _carga_invisivel >= TEMPO_PARA_SUMIR:
+		_sumir()
+	# Vai ficando transparente enquanto carrega: os outros veem que ele vai sumir.
+	modulate.a = lerpf(1.0, 0.45, _carga_invisivel / TEMPO_PARA_SUMIR)
+
+
+func _sumir() -> void:
+	_carga_invisivel = 0.0
+	invisivel = true
+	visible = false
+	if arma != "":
 		_largar_arma(arma, municao)
 		arma = ""
 
 
+func _aparecer() -> void:
+	invisivel = false
+	visible = true
+	modulate.a = 1.0
+	_recarga_invisibilidade = RECARGA_INVISIBILIDADE
+
+
 func _atacar() -> void:
-	if invisivel:
+	if invisivel or arma == "":
 		_golpear()
-	elif arma != "":
+	elif Armas.TIPOS[arma]["modo"] == "arremesso":
+		_arremessar()
+	else:
 		_atirar()
+
+
+func _arremessar() -> void:
+	var lancada := ArmaLancada.new()
+	lancada.tipo = arma
+	lancada.municao = municao
+	lancada.dono = self
+	lancada.direcao = direcao
+	lancada.position = position + Desenho.ponta_da_arma(direcao, _olhando_direita)
+	mundo.add_child(lancada)
+	arma = ""
+
+
+## Chamado pela arma jogada quando ela volta para a mão.
+func receber_arma_de_volta(tipo: String, restante: int) -> void:
+	arma = tipo
+	municao = restante
 
 
 func _atirar() -> void:
@@ -130,6 +181,7 @@ func _atirar() -> void:
 		bala.dono = self
 		bala.direcao = direcao.rotated(angulo)
 		bala.alcance = dados["alcance"]
+		bala.velocidade = dados["velocidade"]
 		bala.position = position + Desenho.ponta_da_arma(direcao, _olhando_direita)
 		mundo.add_child(bala)
 	if municao > 0:
@@ -142,15 +194,24 @@ func _golpear() -> void:
 	if _recarga_golpe > 0.0:
 		return
 	_recarga_golpe = RECARGA_GOLPE
+	# Bater tira da invisibilidade: ele aparece para dar o golpe.
+	if invisivel:
+		_aparecer()
 	var acertou := false
 	for outro in get_tree().get_nodes_in_group("camaleoes"):
-		if outro != self and outro.vivo and position.distance_to(outro.position) <= ALCANCE_GOLPE:
+		if outro == self or not outro.vivo:
+			continue
+		var para_outro: Vector2 = outro.position - position
+		var distancia := para_outro.length()
+		var na_frente := absf(direcao.angle_to(para_outro)) <= ANGULO_GOLPE
+		if distancia <= RAIO * 2.0 or (distancia <= ALCANCE_GOLPE and na_frente):
 			outro.morrer()
 			acertou = true
-	# O anel aparece para todos: golpear entrega por um instante onde você está.
 	var efeito := EfeitoGolpe.new()
 	efeito.position = position
+	efeito.direcao = direcao
 	efeito.alcance = ALCANCE_GOLPE
+	efeito.abertura = ANGULO_GOLPE
 	efeito.acertou = acertou
 	mundo.add_child(efeito)
 
@@ -247,3 +308,8 @@ func _mais_perto(nos: Array) -> Node2D:
 func _draw() -> void:
 	var escala := Vector2.ONE * Desenho.ESCALA_JOGO
 	Desenho.desenhar(self, Transform2D(0.0, escala, 0.0, Vector2.ZERO), cor, direcao, _olhando_direita, arma, _passo)
+	if _carga_invisivel > 0.0:
+		# Anel que vai se completando enquanto o botão de invisível é segurado.
+		var t := _carga_invisivel / TEMPO_PARA_SUMIR
+		draw_arc(Vector2.ZERO, 34.0, 0.0, TAU, 32, Color(0, 0, 0, 0.3), 5.0, true)
+		draw_arc(Vector2.ZERO, 34.0, -PI / 2.0, -PI / 2.0 + TAU * t, 32, Color.WHITE, 3.0, true)
