@@ -19,6 +19,7 @@ func _ready() -> void:
 	forma.shape = circulo
 	add_child(forma)
 	body_entered.connect(_ao_atingir)
+	z_index = 1
 
 
 func _physics_process(delta: float) -> void:
@@ -37,4 +38,7 @@ func _ao_atingir(corpo: Node) -> void:
 
 
 func _draw() -> void:
-	draw_circle(Vector2.ZERO, RAIO, Color(1.0, 0.95, 0.5))
+	# Rastro curto atrás da bala e um brilho em volta.
+	draw_line(Vector2.ZERO, -direcao * 14.0, Color(1.0, 0.85, 0.3, 0.5), RAIO * 1.5)
+	draw_circle(Vector2.ZERO, RAIO * 1.8, Color(1.0, 0.9, 0.4, 0.3))
+	draw_circle(Vector2.ZERO, RAIO, Color(1.0, 0.97, 0.7))

@@ -1,5 +1,5 @@
 extends CharacterBody2D
-## Um camaleão controlado por um jogador.
+## Um camaleão controlado por um jogador (teclado ou controle) ou por um bot.
 ## Visível: anda e atira com a arma (se tiver uma).
 ## Invisível: some para todos (inclusive para o próprio jogador), solta a arma
 ## no chão e o ataque vira um golpe que mata quem estiver perto.
@@ -10,6 +10,8 @@ const Bala := preload("res://scripts/bala.gd")
 const ArmaNoChao := preload("res://scripts/arma_no_chao.gd")
 const Armas := preload("res://scripts/armas.gd")
 const EfeitoGolpe := preload("res://scripts/efeito_golpe.gd")
+const EfeitoMorte := preload("res://scripts/efeito_morte.gd")
+const Desenho := preload("res://scripts/desenho_camaleao.gd")
 
 const VELOCIDADE := 260.0
 const RAIO := 18.0
@@ -19,7 +21,8 @@ const ALCANCE_GOLPE := 75.0
 const RECARGA_GOLPE := 0.4
 const RECARGA_INVISIBILIDADE := 0.5
 
-var prefixo := "p1"
+var controle := "teclado1" # prefixo das ações em controles.gd
+var bot := "" # "" = jogador de verdade; "parado" ou "andando" = bot de teste
 var cor := Color.WHITE
 var mundo: Node # onde balas e armas soltas são criadas
 
@@ -32,6 +35,14 @@ var vivo := true
 var _recarga_tiro := 0.0
 var _recarga_golpe := 0.0
 var _recarga_invisibilidade := 0.0
+var _olhando_direita := true
+var _passo := 0.0 # animação de andar
+
+# Decisão atual do bot (ele repensa algumas vezes por segundo).
+var _bot_tempo := 0.0
+var _bot_mover := Vector2.ZERO
+var _bot_mirar := Vector2.ZERO
+var _bot_atirar := false
 
 
 func _ready() -> void:
@@ -43,6 +54,7 @@ func _ready() -> void:
 	forma.shape = circulo
 	add_child(forma)
 	add_to_group("camaleoes")
+	_olhando_direita = direcao.x >= 0.0
 
 
 func _physics_process(delta: float) -> void:
@@ -52,17 +64,34 @@ func _physics_process(delta: float) -> void:
 	_recarga_golpe -= delta
 	_recarga_invisibilidade -= delta
 
-	var entrada := Input.get_vector(
-		prefixo + "_esquerda", prefixo + "_direita", prefixo + "_cima", prefixo + "_baixo"
-	)
+	var entrada := Vector2.ZERO
+	var quer_atacar := false
+	var quer_invisivel := false
+	if bot != "":
+		_pensar_bot(delta)
+		entrada = _bot_mover
+		quer_atacar = _bot_atirar
+		_bot_atirar = false
+	else:
+		entrada = Input.get_vector(
+			controle + "_esquerda", controle + "_direita", controle + "_cima", controle + "_baixo"
+		)
+		quer_atacar = Input.is_action_just_pressed(controle + "_atacar")
+		quer_invisivel = Input.is_action_just_pressed(controle + "_invisivel")
+
 	if entrada != Vector2.ZERO:
 		direcao = entrada.normalized()
+	if _bot_mirar != Vector2.ZERO:
+		direcao = _bot_mirar
+	if absf(direcao.x) > 0.1:
+		_olhando_direita = direcao.x > 0.0
 	velocity = entrada * VELOCIDADE
 	move_and_slide()
+	_passo = _passo + delta * 14.0 if entrada != Vector2.ZERO else 0.0
 
-	if Input.is_action_just_pressed(prefixo + "_invisivel"):
+	if quer_invisivel:
 		_alternar_invisibilidade()
-	if Input.is_action_just_pressed(prefixo + "_atacar"):
+	if quer_atacar:
 		_atacar()
 	queue_redraw()
 
@@ -101,7 +130,7 @@ func _atirar() -> void:
 		bala.dono = self
 		bala.direcao = direcao.rotated(angulo)
 		bala.alcance = dados["alcance"]
-		bala.position = position + direcao * (RAIO + 6.0)
+		bala.position = position + Desenho.ponta_da_arma(direcao, _olhando_direita)
 		mundo.add_child(bala)
 	if municao > 0:
 		municao -= 1
@@ -152,17 +181,69 @@ func morrer() -> void:
 	if not vivo:
 		return
 	vivo = false
+	var efeito := EfeitoMorte.new()
+	efeito.position = position
+	efeito.cor = cor
+	mundo.add_child.call_deferred(efeito)
 	morreu.emit(self)
 	queue_free()
 
 
+# --- Bot de teste -----------------------------------------------------------
+# Bem simples: pega uma arma se estiver desarmado, chega a uma distância média
+# do inimigo visível mais perto, anda de lado e atira com um pouco de erro.
+
+func _pensar_bot(delta: float) -> void:
+	_bot_tempo -= delta
+	if _bot_tempo > 0.0:
+		return
+	_bot_tempo = randf_range(0.2, 0.4)
+	_bot_mirar = Vector2.ZERO
+	if bot == "parado":
+		_bot_mover = Vector2.ZERO
+		return
+
+	var travado := _bot_mover != Vector2.ZERO and get_real_velocity().length() < VELOCIDADE * 0.3
+	var alvo := _mais_perto(_inimigos_visiveis())
+	if arma == "":
+		var arma_perto := _mais_perto(get_tree().get_nodes_in_group("armas_no_chao"))
+		if arma_perto:
+			_bot_mover = position.direction_to(arma_perto.position)
+		else:
+			_bot_mover = Vector2.from_angle(randf() * TAU)
+	elif alvo:
+		var para_alvo := alvo.position - position
+		var distancia := para_alvo.length()
+		if distancia > 280.0:
+			_bot_mover = para_alvo.normalized()
+		elif distancia < 150.0:
+			_bot_mover = -para_alvo.normalized()
+		else:
+			_bot_mover = para_alvo.normalized().orthogonal() * (1.0 if randf() < 0.5 else -1.0)
+		_bot_mirar = para_alvo.normalized().rotated(randf_range(-0.25, 0.25))
+		_bot_atirar = distancia < 500.0 and randf() < 0.5
+	else:
+		_bot_mover = Vector2.from_angle(randf() * TAU)
+	if travado:
+		_bot_mover = Vector2.from_angle(randf() * TAU)
+
+
+func _inimigos_visiveis() -> Array:
+	var lista: Array = []
+	for outro in get_tree().get_nodes_in_group("camaleoes"):
+		if outro != self and outro.vivo and not outro.invisivel:
+			lista.append(outro)
+	return lista
+
+
+func _mais_perto(nos: Array) -> Node2D:
+	var melhor: Node2D = null
+	for no in nos:
+		if melhor == null or position.distance_to(no.position) < position.distance_to(melhor.position):
+			melhor = no
+	return melhor
+
+
 func _draw() -> void:
-	# Placeholder: corpo, olho apontando para a direção e cano da arma.
-	draw_circle(Vector2.ZERO, RAIO, cor)
-	draw_arc(Vector2.ZERO, RAIO, 0.0, TAU, 24, cor.darkened(0.4), 2.0)
-	draw_circle(direcao * (RAIO * 0.5), 5.0, Color.WHITE)
-	draw_circle(direcao * (RAIO * 0.6), 2.5, Color.BLACK)
-	if arma != "":
-		var dados: Dictionary = Armas.TIPOS[arma]
-		var comprimento := 16.0 if arma == "espingarda" else 12.0
-		draw_line(direcao * RAIO * 0.6, direcao * (RAIO + comprimento), dados["cor"], 6.0)
+	var escala := Vector2.ONE * Desenho.ESCALA_JOGO
+	Desenho.desenhar(self, Transform2D(0.0, escala, 0.0, Vector2.ZERO), cor, direcao, _olhando_direita, arma, _passo)
