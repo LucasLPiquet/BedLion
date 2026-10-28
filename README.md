@@ -31,13 +31,14 @@ Quem entra, em ordem: teclado 1, teclado 2 e depois cada controle conectado. As 
 
 ## Regras do protótipo
 
-- Todo camaleão começa com a arma inicial, que atira projéteis em linha reta.
-- Ficar invisível esconde o camaleão de todo mundo, inclusive do próprio jogador, e larga a arma no chão.
-- Invisível, o ataque vira um golpe corpo a corpo: mata quem estiver a até 75 px (centro a centro) e mostra um anel rápido, que entrega por um instante onde você está. O alcance é `ALCANCE_GOLPE` em `scripts/camaleao.gd`.
+- Todo camaleão começa com a pistola. Atacar com ela **joga a pistola como um bumerangue**: ela vai girando até uns 320 px e volta para a sua mão, matando quem acertar na ida e na volta. Enquanto ela está no ar você está desarmado. Se ela bater numa parede, cai no chão ali e qualquer um pode pegar. Se você estiver invisível ou já tiver pegado outra arma quando ela voltar, ela também cai no chão.
+- **Sem arma na mão** (pistola no ar, perdida ou invisível), o ataque vira um **golpe curto** na frente do camaleão: mata quem estiver a até 70 px (centro a centro) na direção em que ele olha, ou quem estiver colado nele de qualquer lado. Tem 0,5 s de espera entre um golpe e outro. Os números ficam no topo de `scripts/camaleao.gd` (`ALCANCE_GOLPE`, `ANGULO_GOLPE`, `RECARGA_GOLPE`).
+- Para ficar invisível é preciso **segurar** o botão por 1 segundo (`TEMPO_PARA_SUMIR`). Enquanto carrega, aparece um anel branco se completando e o camaleão vai ficando transparente; soltar antes cancela. Ao sumir, ele larga a arma no chão.
+- Invisível, ninguém vê o camaleão, nem o próprio jogador. Um toque no botão de invisível, ou **dar um golpe**, faz ele aparecer de novo. Por isso não dá para ficar batendo escondido: cada golpe entrega você.
 - Ao voltar a ficar visível, o camaleão está desarmado até passar por cima de uma arma no chão.
 - Há uma pistola extra no centro do mapa.
-- A cada 10 segundos aparece uma espingarda (com brilho pulsando) em um ponto sorteado do mapa, no máximo 2 ao mesmo tempo. Ela atira 5 balas em leque com alcance curto e tem 6 tiros; quando acaba, você fica desarmado. Passar por cima dela com a pistola troca as armas (a pistola fica no chão). Intervalo, limite e pontos ficam no topo de `scripts/main.gd`; os números das armas, em `scripts/armas.gd`.
-- Projéteis também acertam camaleões invisíveis.
+- A cada 10 segundos aparece uma espingarda (com brilho pulsando) em um ponto sorteado do mapa, no máximo 2 ao mesmo tempo. Ela atira 5 balas em leque com alcance curto, espera 0,9 s entre tiros e tem 4 tiros; quando acaba, você fica desarmado. Passar por cima dela com a pistola troca as armas (a pistola fica no chão). Intervalo, limite e pontos ficam no topo de `scripts/main.gd`; os números das armas (velocidade, alcance, munição, se é arremesso ou tiro), em `scripts/armas.gd`.
+- Projéteis e armas jogadas também acertam camaleões invisíveis.
 
 ## Estrutura
 
@@ -49,9 +50,10 @@ Quem entra, em ordem: teclado 1, teclado 2 e depois cada controle conectado. As 
 - `scripts/placar.gd`: placar no topo da tela.
 - `scripts/efeito_morte.gd`: "puf" quando um camaleão morre.
 - `scripts/bala.gd`: projétil.
+- `scripts/arma_lancada.gd`: arma jogada como bumerangue.
 - `scripts/arma_no_chao.gd`: arma que pode ser pega do chão.
 - `scripts/armas.gd`: tipos de arma e seus números.
-- `scripts/efeito_golpe.gd`: anel visual do golpe.
+- `scripts/efeito_golpe.gd`: risco visual do golpe curto.
 - `scripts/controles.gd`: teclas e botões de cada controle (autoload).
 - `arte/referencia_camaleao.jpg`: desenho de referência do camaleão.
 

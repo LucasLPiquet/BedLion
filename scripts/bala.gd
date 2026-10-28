@@ -1,10 +1,10 @@
 extends Area2D
 ## Projétil das armas. Some ao bater em parede e mata o camaleão que acertar.
 
-const VELOCIDADE := 700.0
 const RAIO := 4.0
 
 var direcao := Vector2.RIGHT
+var velocidade := 480.0
 var dono: Node
 var alcance := INF
 var _percorrido := 0.0
@@ -23,8 +23,8 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	position += direcao * VELOCIDADE * delta
-	_percorrido += VELOCIDADE * delta
+	position += direcao * velocidade * delta
+	_percorrido += velocidade * delta
 	if _percorrido >= alcance:
 		queue_free()
 
