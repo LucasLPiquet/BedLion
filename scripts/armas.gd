@@ -1,17 +1,28 @@
 extends RefCounted
 ## Tipos de arma. Para criar ou ajustar uma arma, basta mexer neste dicionário.
 ## nivel: arma de nível maior substitui a de nível menor ao passar por cima.
+## modo: "arremesso" = a arma é jogada como um bumerangue (veja abaixo);
+##       "tiro" = atira balas e gasta munição.
+## velocidade: pixels por segundo da arma jogada ou das balas.
+## alcance: até onde a arma jogada vai antes de voltar, ou até onde vai cada bala.
+## recarga: segundos entre um tiro e outro (só no modo "tiro").
 ## municao: -1 é infinita; quando acaba, o camaleão fica desarmado.
-## alcance: distância máxima de cada bala (INF = até bater em algo).
+##
+## Arremesso (estilo Boomerang Fu): a arma sai da mão, gira até o alcance e
+## volta para quem jogou. Enquanto ela está no ar você está desarmado (o ataque
+## vira golpe de perto). Se ela bater numa parede, cai no chão ali e qualquer um
+## pode pegar. Ela mata quem acertar na ida e na volta.
 
 const TIPOS := {
 	"pistola": {
-		"nivel": 1, "recarga": 0.35, "balas": 1, "espalhamento": 0.0,
-		"alcance": INF, "municao": -1, "cor": Color(0.25, 0.25, 0.28),
+		"nivel": 1, "modo": "arremesso", "velocidade": 480.0, "alcance": 320.0,
+		"recarga": 0.0, "balas": 1, "espalhamento": 0.0,
+		"municao": -1, "cor": Color(0.25, 0.25, 0.28),
 	},
 	"espingarda": {
-		"nivel": 2, "recarga": 0.6, "balas": 5, "espalhamento": 0.5,
-		"alcance": 380.0, "municao": 6, "cor": Color(0.85, 0.2, 0.25),
+		"nivel": 2, "modo": "tiro", "velocidade": 480.0, "alcance": 320.0,
+		"recarga": 0.9, "balas": 5, "espalhamento": 0.5,
+		"municao": 4, "cor": Color(0.85, 0.2, 0.25),
 	},
 }
 
