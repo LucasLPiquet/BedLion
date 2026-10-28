@@ -10,35 +10,39 @@ const TECLADOS := {
 		"baixo": [KEY_S],
 		"esquerda": [KEY_A],
 		"direita": [KEY_D],
-		"atacar": [KEY_F],
+		"golpe": [KEY_F],
 		"invisivel": [KEY_G],
+		"lingua": [KEY_H],
 	},
 	"teclado2": {
 		"cima": [KEY_UP],
 		"baixo": [KEY_DOWN],
 		"esquerda": [KEY_LEFT],
 		"direita": [KEY_RIGHT],
-		"atacar": [KEY_PERIOD, KEY_KP_1],
+		"golpe": [KEY_PERIOD, KEY_KP_1],
 		"invisivel": [KEY_COMMA, KEY_KP_2],
+		# A tecla depois do ponto: "/" no teclado americano, ";" no brasileiro.
+		"lingua": [KEY_SLASH, KEY_SEMICOLON, KEY_KP_3],
 	},
 }
 
-## Botões do controle (nomes do Xbox: A, B, LB, RB e o direcional).
+## Botões do controle (nomes do Xbox: A, B, X, LB, RB e o direcional).
 const BOTOES_PAD := {
 	"cima": [JOY_BUTTON_DPAD_UP],
 	"baixo": [JOY_BUTTON_DPAD_DOWN],
 	"esquerda": [JOY_BUTTON_DPAD_LEFT],
 	"direita": [JOY_BUTTON_DPAD_RIGHT],
-	"atacar": [JOY_BUTTON_A, JOY_BUTTON_RIGHT_SHOULDER],
+	"golpe": [JOY_BUTTON_A, JOY_BUTTON_RIGHT_SHOULDER],
 	"invisivel": [JOY_BUTTON_B, JOY_BUTTON_LEFT_SHOULDER],
+	"lingua": [JOY_BUTTON_X],
 }
-## Eixos do controle: [eixo, sentido]. Analógico esquerdo move; gatilhos RT/LT.
+## Eixos do controle: [eixo, sentido]. Analógico esquerdo move; RT é a língua, LT o invisível.
 const EIXOS_PAD := {
 	"cima": [JOY_AXIS_LEFT_Y, -1.0],
 	"baixo": [JOY_AXIS_LEFT_Y, 1.0],
 	"esquerda": [JOY_AXIS_LEFT_X, -1.0],
 	"direita": [JOY_AXIS_LEFT_X, 1.0],
-	"atacar": [JOY_AXIS_TRIGGER_RIGHT, 1.0],
+	"lingua": [JOY_AXIS_TRIGGER_RIGHT, 1.0],
 	"invisivel": [JOY_AXIS_TRIGGER_LEFT, 1.0],
 }
 ## Quantos controles de videogame são registrados (pad0 até pad7).
@@ -66,6 +70,8 @@ func _ready() -> void:
 				evento.device = pad
 				evento.button_index = botao
 				InputMap.action_add_event(nome, evento)
+			if not EIXOS_PAD.has(acao):
+				continue
 			var eixo: Array = EIXOS_PAD[acao]
 			var movimento := InputEventJoypadMotion.new()
 			movimento.device = pad
@@ -80,13 +86,13 @@ func _criar_acao(nome: String) -> String:
 	return nome
 
 
-## Texto curto de ajuda para mostrar na tela (primeiro botão ataca, segundo fica invisível).
+## Texto curto de ajuda para mostrar na tela (golpe / invisível / língua).
 func descricao(controle: String) -> String:
 	match controle:
 		"teclado1":
-			return "WASD, F/G"
+			return "WASD, F/G/H"
 		"teclado2":
-			return "setas, . / ,"
+			return "setas, . / , / ;"
 	if controle.begins_with("pad"):
-		return "controle %d, A/B" % (int(controle.substr(3)) + 1)
+		return "controle %d, A/B/X" % (int(controle.substr(3)) + 1)
 	return "bot"
