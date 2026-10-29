@@ -11,6 +11,8 @@ extends CharacterBody2D
 ##   golpear faz ele aparecer de novo, então não dá para ficar batendo escondido.
 ## Invisível: segura o botão por TEMPO_PARA_SUMIR segundos para sumir para todos
 ## (inclusive para o próprio jogador). Se tiver um upgrade de língua, ele cai no chão.
+## Pés sujos: quem pisa em cocô de pombo (coco_pombo.gd) deixa pegadas por um
+## tempo, mesmo invisível.
 
 signal morreu(camaleao)
 
@@ -18,16 +20,18 @@ const Linguas := preload("res://scripts/linguas.gd")
 const LinguaNoChao := preload("res://scripts/lingua_no_chao.gd")
 const EfeitoGolpe := preload("res://scripts/efeito_golpe.gd")
 const EfeitoMorte := preload("res://scripts/efeito_morte.gd")
+const Pegada := preload("res://scripts/pegada.gd")
 const Desenho := preload("res://scripts/desenho_camaleao.gd")
 
-const VELOCIDADE := 260.0
+const VELOCIDADE := 300.0
 const RAIO := 18.0
 ## Distância máxima entre os centros dos dois camaleões para o golpe matar.
-## Cada camaleão tem raio 18, então 70 deixa uns 35 px de folga entre eles.
-const ALCANCE_GOLPE := 70.0
-## Abertura do golpe para cada lado da direção em que ele olha (1.3 rad = uns 75°).
-## Quem estiver colado (menos de 2 raios) é acertado de qualquer lado.
-const ANGULO_GOLPE := 1.3
+## Cada camaleão tem raio 18, então 95 deixa uns 60 px de folga entre eles.
+const ALCANCE_GOLPE := 95.0
+## Abertura do golpe para cada lado da direção em que ele olha (1.5 rad = uns 85°).
+const ANGULO_GOLPE := 1.5
+## Quem estiver mais perto que isso (centro a centro) é acertado de qualquer lado.
+const DISTANCIA_COLADO := 50.0
 const RECARGA_GOLPE := 0.5
 ## Espera da língua depois de voltar sozinha (errou ou terminou de puxar).
 const RECARGA_LINGUA := 0.3
@@ -39,14 +43,16 @@ const TEMPO_ATE_SE_SOLTAR := 0.25
 ## A puxada termina quando os dois ficam a esta distância (centro a centro).
 ## É menos que ALCANCE_GOLPE, então dá para golpear logo em seguida.
 const DISTANCIA_FIM_PUXADA := 42.0
-## Tamanho da ponta da língua para pegar alguém.
-const RAIO_PONTA := 7.0
+## Tamanho da ponta da língua para pegar alguém (maior = mais fácil acertar).
+const RAIO_PONTA := 16.0
 ## Se um terceiro camaleão passar por cima da língua esticada, ela é cortada.
 const LINGUA_PODE_SER_CORTADA := true
 ## Quanto tempo segurar o botão de invisível para sumir (soltar antes cancela).
 const TEMPO_PARA_SUMIR := 1.0
 ## Depois de aparecer, quanto esperar para poder começar a sumir de novo.
 const RECARGA_INVISIBILIDADE := 0.5
+## Com os pés sujos, deixa uma pegada a cada tantos pixels andados.
+const DISTANCIA_ENTRE_PEGADAS := 24.0
 
 var controle := "teclado1" # prefixo das ações em controles.gd
 var bot := "" # "" = jogador de verdade; "parado" ou "andando" = bot de teste
@@ -65,6 +71,9 @@ var _recarga_invisibilidade := 0.0
 var _carga_invisivel := 0.0 # segundos segurando o botão para sumir
 var _olhando_direita := true
 var _passo := 0.0 # animação de andar
+var _tempo_pes_sujos := 0.0 # segundos que ainda vai deixar pegadas
+var _andado_desde_pegada := 0.0
+var _pe_esquerdo := true # as pegadas alternam um lado e o outro
 
 # Língua lançada por este camaleão.
 var _estado_lingua := "" # "" = na boca; "indo", "voltando" ou "puxando"
@@ -152,6 +161,7 @@ func _physics_process(delta: float) -> void:
 	velocity = entrada * VELOCIDADE
 	move_and_slide()
 	_passo = _passo + delta * 14.0 if entrada != Vector2.ZERO else 0.0
+	_deixar_pegadas(delta)
 
 	_controlar_invisibilidade(delta, apertou_invisivel, segurando_invisivel)
 	if quer_golpear:
@@ -218,15 +228,17 @@ func _mover_lingua(delta: float) -> void:
 		"indo":
 			var passo: float = _dados_lingua["velocidade"] * delta
 			var nova := _ponta + direcao * passo
-			if _bate_em_parede(_ponta, nova):
-				_estado_lingua = "voltando"
-				return
+			# Confere a parede a partir do corpo (e não da boca): colado numa
+			# parede, a boca já fica dentro dela e a língua passaria direto.
+			var batida := _parede_entre(position, nova)
+			if not batida.is_empty():
+				nova = batida["position"] # a ponta para na parede
 			var pego := _camaleao_no_caminho(_ponta, nova)
 			_ponta = nova
 			_percorrido += passo
 			if pego:
 				_comecar_puxada(pego)
-			elif _percorrido >= _dados_lingua["alcance"]:
+			elif not batida.is_empty() or _percorrido >= _dados_lingua["alcance"]:
 				_estado_lingua = "voltando"
 		"voltando":
 			var passo: float = _dados_lingua["velocidade"] * delta
@@ -247,15 +259,26 @@ func _mover_lingua(delta: float) -> void:
 				soltar_lingua(RECARGA_LINGUA)
 			elif LINGUA_PODE_SER_CORTADA and _alguem_cortou():
 				soltar_lingua(RECARGA_SOLTAR)
+			elif _bate_em_parede(position, _preso.position):
+				# Uma parede ficou no meio (ele foi arrastado por uma quina): solta.
+				soltar_lingua(RECARGA_LINGUA)
+
+
+## Onde a linha de "de" até "ate" bate numa parede ({} se não bate).
+## O resultado tem "position" = o ponto da batida.
+func _parede_entre(de: Vector2, ate: Vector2) -> Dictionary:
+	var consulta := PhysicsRayQueryParameters2D.create(de, ate, 1) # 1 = paredes
+	consulta.hit_from_inside = true # começando dentro da parede também conta
+	return get_world_2d().direct_space_state.intersect_ray(consulta)
 
 
 func _bate_em_parede(de: Vector2, ate: Vector2) -> bool:
-	var consulta := PhysicsRayQueryParameters2D.create(de, ate, 1) # 1 = paredes
-	return not get_world_2d().direct_space_state.intersect_ray(consulta).is_empty()
+	return not _parede_entre(de, ate).is_empty()
 
 
 ## Primeiro camaleão (que não seja ele e não esteja sendo puxado) que a ponta
 ## encosta indo de "de" até "ate". Pega invisíveis também, e eles aparecem.
+## Não pega quem está atrás de uma parede.
 func _camaleao_no_caminho(de: Vector2, ate: Vector2) -> Node:
 	var melhor: Node = null
 	var melhor_distancia := INF
@@ -263,7 +286,8 @@ func _camaleao_no_caminho(de: Vector2, ate: Vector2) -> Node:
 		if outro == self or not outro.vivo or outro._sendo_puxado():
 			continue
 		var perto := Geometry2D.get_closest_point_to_segment(outro.position, de, ate)
-		if perto.distance_to(outro.position) <= RAIO + RAIO_PONTA:
+		if perto.distance_to(outro.position) <= RAIO + RAIO_PONTA \
+				and not _bate_em_parede(position, outro.position):
 			var distancia := de.distance_to(perto)
 			if distancia < melhor_distancia:
 				melhor = outro
@@ -365,7 +389,9 @@ func _golpear() -> void:
 		var para_outro: Vector2 = outro.position - position
 		var distancia := para_outro.length()
 		var na_frente := absf(direcao.angle_to(para_outro)) <= ANGULO_GOLPE
-		if distancia <= RAIO * 2.0 or (distancia <= ALCANCE_GOLPE and na_frente):
+		if distancia > ALCANCE_GOLPE or (distancia > DISTANCIA_COLADO and not na_frente):
+			continue
+		if not _bate_em_parede(position, outro.position): # não bate através de parede
 			outro.morrer()
 			acertou = true
 	var efeito := EfeitoGolpe.new()
@@ -375,6 +401,35 @@ func _golpear() -> void:
 	efeito.abertura = ANGULO_GOLPE
 	efeito.acertou = acertou
 	mundo.add_child(efeito)
+
+
+# --- Pés sujos (cocô de pombo) ----------------------------------------------
+
+## Chamado pelo cocô de pombo quando este camaleão pisa nele (ou leva na cabeça).
+func sujar_pes(segundos: float) -> void:
+	_tempo_pes_sujos = maxf(_tempo_pes_sujos, segundos)
+
+
+## Com os pés sujos, vai largando pegadas no chão enquanto anda. Elas são
+## criadas no mundo (não dentro do camaleão), então aparecem mesmo invisível.
+func _deixar_pegadas(delta: float) -> void:
+	if _tempo_pes_sujos <= 0.0:
+		return
+	_tempo_pes_sujos -= delta
+	var andou := get_real_velocity().length() * delta
+	if andou <= 0.0:
+		return
+	_andado_desde_pegada += andou
+	if _andado_desde_pegada < DISTANCIA_ENTRE_PEGADAS:
+		return
+	_andado_desde_pegada = 0.0
+	_pe_esquerdo = not _pe_esquerdo
+	var andando := get_real_velocity().normalized()
+	var lado := andando.orthogonal() * (6.0 if _pe_esquerdo else -6.0)
+	var pegada := Pegada.new()
+	pegada.position = position + Vector2(0, 22) + lado # nos pés
+	pegada.rotation = andando.angle()
+	mundo.add_child(pegada)
 
 
 # --- Upgrades de língua -----------------------------------------------------
@@ -464,6 +519,10 @@ func _mais_perto(nos: Array) -> Node2D:
 func _draw() -> void:
 	var escala := Vector2.ONE * Desenho.ESCALA_JOGO
 	Desenho.desenhar(self, Transform2D(0.0, escala, 0.0, Vector2.ZERO), cor, direcao, _olhando_direita, _passo)
+	if _tempo_pes_sujos > 0.0:
+		# Manchinhas de cocô nos pés.
+		for x in [-6.0, 8.0]:
+			draw_circle(Vector2(x, 23), 3.5, Pegada.COR)
 	if lingua != Linguas.BASICA:
 		# Bolinha em cima da cabeça com a cor do upgrade de língua.
 		var cor_upgrade: Color = Linguas.TIPOS[lingua]["cor"]
