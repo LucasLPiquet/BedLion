@@ -7,9 +7,13 @@ const LinguaNoChao := preload("res://scripts/lingua_no_chao.gd")
 const Linguas := preload("res://scripts/linguas.gd")
 const Cenario := preload("res://scripts/cenario.gd")
 const Placar := preload("res://scripts/placar.gd")
+const CocoPombo := preload("res://scripts/coco_pombo.gd")
 
-const TAMANHO := Vector2(1280, 720)
-const ESPESSURA_PAREDE := 32.0
+## Tamanho da arena (em pixels do jogo). A janela continua do mesmo tamanho:
+## o jogo é esticado para caber nela (veja _ready). Era 1280 x 720.
+## Se mudar, ajuste também as posições abaixo (obstáculos, upgrades e início).
+const TAMANHO := Vector2(1600, 900)
+const ESPESSURA_PAREDE := 40.0
 
 ## Pontos para ganhar a partida (cada rodada vale 1 ponto para quem sobrar vivo).
 const PONTOS_PARA_VENCER := 5
@@ -24,29 +28,33 @@ const MODOS_BOT := ["", "parado", "andando"]
 const NOMES_MODO_BOT := ["sem bots", "bots parados", "bots andando"]
 
 const OBSTACULOS := [
-	Rect2(380, 150, 60, 160),
-	Rect2(840, 410, 60, 160),
-	Rect2(560, 110, 160, 40),
-	Rect2(560, 570, 160, 40),
+	Rect2(475, 188, 75, 200),
+	Rect2(1050, 512, 75, 200),
+	Rect2(700, 138, 200, 50),
+	Rect2(700, 712, 200, 50),
 ]
 ## Upgrades de língua que já estão no mapa no começo de cada rodada.
-const UPGRADES_NO_INICIO := [Vector2(640, 360)]
+const UPGRADES_NO_INICIO := [Vector2(800, 450)]
 
 ## Upgrades de língua (sorteados entre os de linguas.gd) aparecem de tempos em tempos.
 const INTERVALO_UPGRADE := 10.0 # segundos entre uma aparição e outra
 const MAX_UPGRADES := 2 # quantos podem estar no chão ao mesmo tempo
 ## Lugares onde eles podem aparecer (sorteado a cada vez, sem repetir um ocupado).
 const PONTOS_UPGRADE := [
-	Vector2(200, 130), Vector2(1080, 130), Vector2(200, 590), Vector2(1080, 590),
-	Vector2(640, 240), Vector2(640, 480), Vector2(500, 470), Vector2(780, 250),
+	Vector2(250, 162), Vector2(1350, 162), Vector2(250, 738), Vector2(1350, 738),
+	Vector2(800, 300), Vector2(800, 600), Vector2(625, 588), Vector2(975, 312),
 ]
+
+## Cocô de pombo (coco_pombo.gd) cai num lugar sorteado de tempos em tempos.
+const INTERVALO_COCO := 4.0 # segundos entre um cocô e outro
+const MAX_COCOS := 4 # quantos podem estar no mapa ao mesmo tempo
 
 ## Visual de cada vaga de jogador, na ordem em que entram.
 const VAGAS := [
-	{"nome": "Verde", "cor": Color(0.45, 0.82, 0.35), "inicio": Vector2(170, 210)},
-	{"nome": "Laranja", "cor": Color(0.98, 0.6, 0.25), "inicio": Vector2(1110, 510)},
-	{"nome": "Azul", "cor": Color(0.35, 0.65, 0.98), "inicio": Vector2(1110, 210)},
-	{"nome": "Rosa", "cor": Color(0.95, 0.5, 0.78), "inicio": Vector2(170, 510)},
+	{"nome": "Verde", "cor": Color(0.45, 0.82, 0.35), "inicio": Vector2(212, 262)},
+	{"nome": "Laranja", "cor": Color(0.98, 0.6, 0.25), "inicio": Vector2(1388, 638)},
+	{"nome": "Azul", "cor": Color(0.35, 0.65, 0.98), "inicio": Vector2(1388, 262)},
+	{"nome": "Rosa", "cor": Color(0.95, 0.5, 0.78), "inicio": Vector2(212, 638)},
 ]
 
 var placar: Array = []
@@ -62,6 +70,8 @@ var _rotulo_ajuda: Label
 
 
 func _ready() -> void:
+	# A tela mostra a arena inteira (TAMANHO), seja qual for o tamanho da janela.
+	get_window().content_scale_size = Vector2i(TAMANHO)
 	_montar_arena()
 	_montar_hud()
 	Input.joy_connection_changed.connect(_ao_mudar_controles)
@@ -117,10 +127,10 @@ func _montar_hud() -> void:
 	_placar.size = Vector2(TAMANHO.x, 50)
 	hud.add_child(_placar)
 
-	_rotulo_mensagem = _criar_rotulo(Vector2(0, TAMANHO.y / 2.0 - 50), 40, 10)
+	_rotulo_mensagem = _criar_rotulo(Vector2(0, TAMANHO.y / 2.0 - 60), 48, 12)
 	hud.add_child(_rotulo_mensagem)
 
-	_rotulo_ajuda = _criar_rotulo(Vector2(0, TAMANHO.y - 26), 13, 4)
+	_rotulo_ajuda = _criar_rotulo(Vector2(0, TAMANHO.y - 32), 16, 5)
 	hud.add_child(_rotulo_ajuda)
 
 
@@ -201,6 +211,12 @@ func _nova_rodada() -> void:
 	relogio.timeout.connect(_spawnar_upgrade)
 	_rodada.add_child(relogio)
 
+	var relogio_coco := Timer.new()
+	relogio_coco.wait_time = INTERVALO_COCO
+	relogio_coco.autostart = true
+	relogio_coco.timeout.connect(_spawnar_coco)
+	_rodada.add_child(relogio_coco)
+
 	for i in _jogadores.size():
 		var dados: Dictionary = _jogadores[i]
 		var inicio: Vector2 = dados["inicio"]
@@ -237,6 +253,24 @@ func _spawnar_upgrade() -> void:
 	if livres.is_empty():
 		return
 	_criar_upgrade(livres.pick_random())
+
+
+## Sorteia um lugar livre no chão (longe das paredes e dos blocos) e solta um cocô lá.
+func _spawnar_coco() -> void:
+	if _rodada_acabou or get_tree().get_nodes_in_group("cocos").size() >= MAX_COCOS:
+		return
+	var margem := ESPESSURA_PAREDE + 30.0
+	for _tentativa in 20:
+		var ponto := Vector2(randf_range(margem, TAMANHO.x - margem), randf_range(margem, TAMANHO.y - margem))
+		var livre := true
+		for retangulo in OBSTACULOS:
+			if retangulo.grow(30.0).has_point(ponto):
+				livre = false
+		if livre:
+			var coco := CocoPombo.new()
+			coco.position = ponto
+			_rodada.add_child(coco)
+			return
 
 
 func _criar_upgrade(posicao: Vector2) -> void:

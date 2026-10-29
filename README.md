@@ -32,21 +32,23 @@ Quem entra, em ordem: teclado 1, teclado 2 e depois cada controle conectado. As 
 ## Regras do protótipo
 
 - Cada camaleão tem dois ataques: a **língua** e o **golpe**.
-- **Língua** (só visível): sai reta da boca, vai até uns 260 px e volta. Se pegar outro camaleão, puxa ele até você em 0,5 s. A língua **não mata**: a ideia é trazer o outro para perto e dar o golpe. Se bater numa parede, ela volta.
+- **Língua** (só visível): sai reta da boca, vai até uns 330 px e volta. Se pegar outro camaleão, puxa ele até você em 0,5 s. A língua **não mata**: a ideia é trazer o outro para perto e dar o golpe. Se bater numa parede (ou na pedra do meio), ela para ali e volta, sem puxar ninguém; ela não pega quem está atrás de parede, e se uma parede ficar no meio enquanto puxa, ela solta.
   - Enquanto a língua está fora (indo, voltando ou puxando) você fica parado e não pode golpear: é a hora em que você está vulnerável.
   - Apertar a língua de novo solta na hora, mas aí a língua fica 1 s sem poder ser usada.
   - Quem foi pego pode se soltar apertando a língua ou o golpe, mas só depois de 0,25 s. Se soltar com o golpe, ele também bate (e mata se você estiver perto).
   - Se um terceiro camaleão passar por cima da língua esticada, ela é cortada.
   - Outros camaleões podem matar os dois com um golpe enquanto um puxa o outro.
   - Os números ficam no topo de `scripts/camaleao.gd` (`RECARGA_SOLTAR`, `TEMPO_ATE_SE_SOLTAR`, `LINGUA_PODE_SER_CORTADA`...) e em `scripts/linguas.gd` (alcance, velocidade e tempo da puxada).
-- **Golpe**: curto, na frente do camaleão. Mata quem estiver a até 70 px (centro a centro) na direção em que ele olha, ou quem estiver colado de qualquer lado. Tem 0,5 s de espera entre um golpe e outro. Funciona visível e invisível (`ALCANCE_GOLPE`, `ANGULO_GOLPE`, `RECARGA_GOLPE` em `scripts/camaleao.gd`).
+- **Golpe**: curto, na frente do camaleão. Mata quem estiver a até 95 px (centro a centro) na direção em que ele olha (uns 85° para cada lado), ou quem estiver a até 50 px de qualquer lado. Não bate através de parede. Tem 0,5 s de espera entre um golpe e outro. Funciona visível e invisível (`ALCANCE_GOLPE`, `ANGULO_GOLPE`, `DISTANCIA_COLADO`, `RECARGA_GOLPE` em `scripts/camaleao.gd`).
 - Para ficar invisível é preciso **segurar** o botão por 1 segundo (`TEMPO_PARA_SUMIR`). Enquanto carrega, aparece um anel branco se completando e o camaleão vai ficando transparente; soltar antes cancela. Com a língua fora não dá para começar a sumir.
 - Invisível, ninguém vê o camaleão, nem o próprio jogador, e ele não pode usar a língua. Um toque no botão de invisível, ou **dar um golpe**, faz ele aparecer de novo. Por isso não dá para ficar batendo escondido: cada golpe entrega você.
 - Se uma língua pegar um camaleão invisível (por sorte), ele aparece e é puxado.
 - **Upgrades de língua**: uma bolha no centro do mapa no começo da rodada e mais uma a cada 10 segundos em um ponto sorteado (no máximo 2 no chão). Passe por cima para pegar; só dá para ter um por vez. Uma bolinha com a cor do upgrade aparece em cima da cabeça.
-  - **Roxa (longa)**: a língua vai até 420 px.
+  - **Roxa (longa)**: a língua vai até 520 px.
   - **Amarela (rápida)**: a língua é bem mais rápida e puxa em 0,3 s.
   - Ao ficar invisível, o upgrade cai no chão e você volta para a língua básica.
+- **Cocô de pombo**: a cada 4 s cai um cocô num lugar sorteado (no máximo 4 no mapa). Antes aparece uma sombra no chão por 1 s, para dar tempo de sair. Quem levar o cocô na cabeça ou pisar nele fica com os pés sujos e deixa **pegadas** por 6 s, mesmo invisível. O cocô fica 15 s no chão e as pegadas somem em 3 s (`INTERVALO_COCO`, `MAX_COCOS` em `scripts/main.gd`; `TEMPO_AVISO`, `TEMPO_PEGADAS`, `TEMPO_NO_CHAO` em `scripts/coco_pombo.gd`).
+- **Arena**: 1600 x 900 (`TAMANHO` em `scripts/main.gd`), esticada para caber na janela.
   - Intervalo, limite e pontos ficam no topo de `scripts/main.gd`.
 
 ## Estrutura
@@ -55,6 +57,7 @@ Quem entra, em ordem: teclado 1, teclado 2 e depois cada controle conectado. As 
 - `scripts/main.gd`: arena, quem joga, rodadas e placar.
 - `scripts/camaleao.gd`: movimento, língua, invisibilidade, golpe e o bot de teste.
 - `scripts/desenho_camaleao.gd`: desenho do camaleão (feito com formas, sem imagem).
+- `scripts/coco_pombo.gd` e `scripts/pegada.gd`: cocô de pombo que cai do céu e as pegadas de quem pisa nele.
 - `scripts/cenario.gd`: desenho do mapa (chão, cerca viva, blocos de pedra, enfeites).
 - `scripts/placar.gd`: placar no topo da tela.
 - `scripts/efeito_morte.gd`: "puf" quando um camaleão morre.
