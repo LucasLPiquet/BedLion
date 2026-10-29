@@ -55,7 +55,7 @@ func _desenhar_chao(rng: RandomNumberGenerator) -> void:
 func _desenhar_musgo(rng: RandomNumberGenerator) -> void:
 	# Manchas de grama: grupos de bolinhas verdes, mais comuns perto da cerca.
 	var centros: Array = []
-	for i in 14:
+	for i in int(14 * _proporcao_area()):
 		centros.append(Vector2(rng.randf_range(0, tamanho.x), rng.randf_range(0, tamanho.y)))
 	for x in range(0, int(tamanho.x), 90):
 		centros.append(Vector2(x + rng.randf_range(0, 40), espessura + 6))
@@ -73,7 +73,8 @@ func _desenhar_musgo(rng: RandomNumberGenerator) -> void:
 func _desenhar_enfeites(rng: RandomNumberGenerator) -> void:
 	var colocados := 0
 	var tentativas := 0
-	while colocados < 90 and tentativas < 1000:
+	var total := int(90 * _proporcao_area())
+	while colocados < total and tentativas < 2000:
 		tentativas += 1
 		var ponto := Vector2(rng.randf_range(espessura + 10, tamanho.x - espessura - 10),
 			rng.randf_range(espessura + 10, tamanho.y - espessura - 10))
@@ -181,6 +182,12 @@ func _caixa(retangulo: Rect2, cor: Color, borda: int) -> void:
 	estilo.border_color = COR_CONTORNO
 	estilo.anti_aliasing = true
 	estilo.draw(get_canvas_item(), retangulo)
+
+
+## Quantas vezes a arena é maior que a original (1280 x 720), para espalhar
+## a mesma quantidade de enfeites por pedaço de chão.
+func _proporcao_area() -> float:
+	return tamanho.x * tamanho.y / (1280.0 * 720.0)
 
 
 func _dentro_de_obstaculo(ponto: Vector2, folga: float) -> bool:

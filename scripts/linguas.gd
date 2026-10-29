@@ -10,15 +10,15 @@ const BASICA := "basica"
 
 const TIPOS := {
 	"basica": {
-		"alcance": 260.0, "velocidade": 900.0, "tempo_puxada": 0.5,
+		"alcance": 330.0, "velocidade": 1100.0, "tempo_puxada": 0.5,
 		"cor": Color(0.95, 0.4, 0.55),
 	},
 	"longa": {
-		"alcance": 420.0, "velocidade": 1000.0, "tempo_puxada": 0.5,
+		"alcance": 520.0, "velocidade": 1250.0, "tempo_puxada": 0.5,
 		"cor": Color(0.6, 0.4, 0.95),
 	},
 	"rapida": {
-		"alcance": 260.0, "velocidade": 1500.0, "tempo_puxada": 0.3,
+		"alcance": 330.0, "velocidade": 1800.0, "tempo_puxada": 0.3,
 		"cor": Color(1.0, 0.8, 0.2),
 	},
 }
@@ -31,7 +31,7 @@ const CONTORNO := Color(0.08, 0.07, 0.1)
 
 ## Desenha a língua saindo de "de" até "ate": linha rosa com ponta redonda.
 ## cor_ponta: a cor do upgrade (ou rosa na básica).
-static func desenhar(item: CanvasItem, de: Vector2, ate: Vector2, cor_ponta: Color, largura := 6.0) -> void:
+static func desenhar(item: CanvasItem, de: Vector2, ate: Vector2, cor_ponta: Color, largura := 8.0) -> void:
 	var raio_ponta := largura * 1.1
 	# Primeiro o contorno, depois a cor por cima: parece uma peça só.
 	item.draw_line(de, ate, CONTORNO, largura + 3.0, true)
