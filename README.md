@@ -56,7 +56,13 @@ Quem entra, em ordem: teclado 1, teclado 2 e depois cada controle conectado. As 
   - **Lago**: um lago grande no meio com uma ponte atravessando.
   - **Rios**: dois rios de cima a baixo, cada um com duas pontes.
   - **Ruínas**: muros espalhados e dois laguinhos redondos.
+  - **Capinzal**: dois campos grandes de capim alto com uma faixa de sol no meio.
   - **Água**: quem pisar na água afunda e morre (também se for puxado pela língua para dentro dela). A língua passa por cima da água. Pontes são seguras. Upgrades e cocô de pombo nunca caem na água nem nas paredes.
+  - **Pistas de quem está invisível**: o mapa entrega quem passa, visível ou não. Ficar parado fora dessas áreas continua seguro.
+    - **Capim alto** (`grama` em `mapas.gd`): esconde metade de quem está dentro (só a cabeça aparece). Quem passa deita as folhas, que ficam mais claras e demoram uns 1,5 s para voltar, deixando um rastro (`scripts/grama_alta.gd`).
+    - **Poças** (`pocas`): rasas, não matam. Andando nelas saem ondinhas; parado, sai uma ondinha menor a cada 1,4 s; quem sai fica 2,5 s deixando pegadas molhadas (`scripts/pistas.gd`).
+    - **Pontes**: andar nelas faz ondinhas na água do lado.
+    - **Manchas de sol** (`luz`): dentro delas aparece a sombra de quem está invisível (`scripts/luz.gd`).
   - Para criar um mapa novo, copie um dos blocos de `scripts/mapas.gd` e mude o nome e as posições. As explicações de cada campo estão no topo do arquivo.
   - Intervalo, limite e pontos ficam no topo de `scripts/main.gd`.
 
@@ -66,10 +72,13 @@ Quem entra, em ordem: teclado 1, teclado 2 e depois cada controle conectado. As 
 - `scripts/main.gd`: arena, quem joga, rodadas e placar.
 - `scripts/camaleao.gd`: movimento, língua, invisibilidade, golpe e o bot de teste.
 - `scripts/desenho_camaleao.gd`: desenho do camaleão (feito com formas, sem imagem).
-- `scripts/coco_pombo.gd` e `scripts/pegada.gd`: cocô de pombo que cai do céu e as pegadas de quem pisa nele.
+- `scripts/coco_pombo.gd` e `scripts/pegada.gd`: cocô de pombo que cai do céu e as pegadas de quem pisa nele (ou sai de uma poça).
 - `scripts/mapas.gd`: lista de mapas (paredes, água, pontes, onde cada um começa, onde caem os upgrades).
 - `scripts/cenario.gd`: desenho do mapa (chão, cerca viva, blocos de pedra, água, pontes, enfeites).
 - `scripts/agua.gd`: brilhinhos que piscam na água.
+- `scripts/grama_alta.gd`: capim alto que se mexe quando alguém passa.
+- `scripts/luz.gd`: manchas de sol e a sombra de quem está invisível dentro delas.
+- `scripts/pistas.gd` e `scripts/ondulacao.gd`: ondinhas em poças e pontes, e pegadas molhadas.
 - `scripts/efeito_afundar.gd`: camaleão afundando com splash quando cai na água.
 - `scripts/placar.gd`: placar no topo da tela.
 - `scripts/efeito_morte.gd`: "puf" quando um camaleão morre.
