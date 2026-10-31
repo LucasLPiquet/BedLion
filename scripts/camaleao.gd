@@ -13,6 +13,8 @@ extends CharacterBody2D
 ## (inclusive para o próprio jogador). Se tiver um upgrade de língua, ele cai no chão.
 ## Pés sujos: quem pisa em cocô de pombo (coco_pombo.gd) deixa pegadas por um
 ## tempo, mesmo invisível.
+## Água: quem entra num lago ou rio do mapa (mapas.gd) afunda e morre, inclusive
+## se for arrastado para dentro pela língua de outro.
 
 signal morreu(camaleao)
 
@@ -20,6 +22,8 @@ const Linguas := preload("res://scripts/linguas.gd")
 const LinguaNoChao := preload("res://scripts/lingua_no_chao.gd")
 const EfeitoGolpe := preload("res://scripts/efeito_golpe.gd")
 const EfeitoMorte := preload("res://scripts/efeito_morte.gd")
+const EfeitoAfundar := preload("res://scripts/efeito_afundar.gd")
+const Mapas := preload("res://scripts/mapas.gd")
 const Pegada := preload("res://scripts/pegada.gd")
 const Desenho := preload("res://scripts/desenho_camaleao.gd")
 
@@ -58,6 +62,7 @@ var controle := "teclado1" # prefixo das ações em controles.gd
 var bot := "" # "" = jogador de verdade; "parado" ou "andando" = bot de teste
 var cor := Color.WHITE
 var mundo: Node # onde efeitos e upgrades largados são criados
+var mapa: Dictionary = {} # mapa da rodada (de mapas.gd), para saber onde tem água
 
 var direcao := Vector2.RIGHT
 var lingua := Linguas.BASICA # tipo em linguas.gd
@@ -118,6 +123,9 @@ func _physics_process(delta: float) -> void:
 	_recarga_golpe -= delta
 	_recarga_lingua -= delta
 	_recarga_invisibilidade -= delta
+	if Mapas.afunda(mapa, position):
+		_morrer(true)
+		return
 
 	var entrada := Vector2.ZERO
 	var quer_golpear := false
@@ -131,6 +139,11 @@ func _physics_process(delta: float) -> void:
 		quer_lingua = _bot_lingua
 		_bot_golpear = false
 		_bot_lingua = false
+		# O bot não anda para dentro da água: para e pensa de novo.
+		if entrada != Vector2.ZERO and Mapas.afunda(mapa, position + entrada.normalized() * 40.0):
+			entrada = Vector2.ZERO
+			_bot_mover = Vector2.ZERO
+			_bot_tempo = 0.0
 	else:
 		entrada = Input.get_vector(
 			controle + "_esquerda", controle + "_direita", controle + "_cima", controle + "_baixo"
@@ -449,16 +462,31 @@ func _largar_upgrade() -> void:
 	mundo.add_child(no_chao)
 
 
+## Chamado pelo golpe de outro camaleão.
 func morrer() -> void:
+	_morrer(false)
+
+
+## caiu_na_agua: em vez do "puf" de fumaça, ele afunda com um splash.
+func _morrer(caiu_na_agua: bool) -> void:
 	if not vivo:
 		return
 	soltar_lingua(RECARGA_LINGUA)
 	if _sendo_puxado():
 		puxado_por.soltar_lingua(RECARGA_LINGUA)
 	vivo = false
-	var efeito := EfeitoMorte.new()
+	var efeito: Node2D
+	if caiu_na_agua:
+		var afundando := EfeitoAfundar.new()
+		afundando.cor = cor
+		afundando.olhando_direita = _olhando_direita
+		afundando.mostrar_corpo = not invisivel
+		efeito = afundando
+	else:
+		var puf := EfeitoMorte.new()
+		puf.cor = cor
+		efeito = puf
 	efeito.position = position
-	efeito.cor = cor
 	mundo.add_child.call_deferred(efeito)
 	morreu.emit(self)
 	queue_free()
@@ -495,9 +523,19 @@ func _pensar_bot(delta: float) -> void:
 			var alcance: float = Linguas.TIPOS[lingua]["alcance"]
 			_bot_lingua = _estado_lingua == "" and distancia < alcance and randf() < 0.4
 	else:
-		_bot_mover = Vector2.from_angle(randf() * TAU)
+		_bot_mover = _direcao_sem_agua()
 	if travado:
-		_bot_mover = Vector2.from_angle(randf() * TAU)
+		_bot_mover = _direcao_sem_agua()
+
+
+## Uma direção sorteada que não leva direto para a água (tenta algumas vezes).
+func _direcao_sem_agua() -> Vector2:
+	var escolhida := Vector2.from_angle(randf() * TAU)
+	for _tentativa in 8:
+		if not Mapas.afunda(mapa, position + escolhida * 60.0):
+			break
+		escolhida = Vector2.from_angle(randf() * TAU)
+	return escolhida
 
 
 func _inimigos_visiveis() -> Array:
