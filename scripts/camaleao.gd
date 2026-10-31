@@ -11,8 +11,8 @@ extends CharacterBody2D
 ##   golpear faz ele aparecer de novo, então não dá para ficar batendo escondido.
 ## Invisível: segura o botão por TEMPO_PARA_SUMIR segundos para sumir para todos
 ## (inclusive para o próprio jogador). Se tiver um upgrade de língua, ele cai no chão.
-## Pés sujos: quem pisa em cocô de pombo (coco_pombo.gd) deixa pegadas por um
-## tempo, mesmo invisível.
+## Pés sujos: quem pisa em cocô de pombo (coco_pombo.gd) ou sai de uma poça
+## (pistas.gd) deixa pegadas por um tempo, mesmo invisível.
 ## Água: quem entra num lago ou rio do mapa (mapas.gd) afunda e morre, inclusive
 ## se for arrastado para dentro pela língua de outro.
 
@@ -77,6 +77,7 @@ var _carga_invisivel := 0.0 # segundos segurando o botão para sumir
 var _olhando_direita := true
 var _passo := 0.0 # animação de andar
 var _tempo_pes_sujos := 0.0 # segundos que ainda vai deixar pegadas
+var _cor_pes := Pegada.COR # cor das pegadas (cocô ou água)
 var _andado_desde_pegada := 0.0
 var _pe_esquerdo := true # as pegadas alternam um lado e o outro
 
@@ -418,8 +419,11 @@ func _golpear() -> void:
 
 # --- Pés sujos (cocô de pombo) ----------------------------------------------
 
-## Chamado pelo cocô de pombo quando este camaleão pisa nele (ou leva na cabeça).
-func sujar_pes(segundos: float) -> void:
+## Chamado pelo cocô de pombo quando este camaleão pisa nele (ou leva na cabeça),
+## e pelas poças (pistas.gd) com a cor de pegada molhada.
+func sujar_pes(segundos: float, cor_pegada := Pegada.COR) -> void:
+	if segundos >= _tempo_pes_sujos:
+		_cor_pes = cor_pegada
 	_tempo_pes_sujos = maxf(_tempo_pes_sujos, segundos)
 
 
@@ -439,7 +443,10 @@ func _deixar_pegadas(delta: float) -> void:
 	_pe_esquerdo = not _pe_esquerdo
 	var andando := get_real_velocity().normalized()
 	var lado := andando.orthogonal() * (6.0 if _pe_esquerdo else -6.0)
+	if Mapas.na_poca(mapa, position + Vector2(0, 22)):
+		return # dentro da poça não marca (ali quem denuncia são as ondinhas)
 	var pegada := Pegada.new()
+	pegada.cor = _cor_pes
 	pegada.position = position + Vector2(0, 22) + lado # nos pés
 	pegada.rotation = andando.angle()
 	mundo.add_child(pegada)
@@ -558,9 +565,9 @@ func _draw() -> void:
 	var escala := Vector2.ONE * Desenho.ESCALA_JOGO
 	Desenho.desenhar(self, Transform2D(0.0, escala, 0.0, Vector2.ZERO), cor, direcao, _olhando_direita, _passo)
 	if _tempo_pes_sujos > 0.0:
-		# Manchinhas de cocô nos pés.
+		# Manchinhas de cocô (ou de água) nos pés.
 		for x in [-6.0, 8.0]:
-			draw_circle(Vector2(x, 23), 3.5, Pegada.COR)
+			draw_circle(Vector2(x, 23), 3.5, _cor_pes)
 	if lingua != Linguas.BASICA:
 		# Bolinha em cima da cabeça com a cor do upgrade de língua.
 		var cor_upgrade: Color = Linguas.TIPOS[lingua]["cor"]

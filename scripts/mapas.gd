@@ -14,7 +14,16 @@ extends RefCounted
 ##   cima. Os cantos são arredondados sozinhos (um retângulo fino vira um rio com
 ##   pontas redondas; um quadrado vira um lago redondo). Dá para juntar vários
 ##   retângulos para fazer um lago com formato diferente.
-## - "pontes": tábuas por cima da água; dá para andar nelas sem cair.
+## - "pontes": tábuas por cima da água; dá para andar nelas sem cair. Quem anda
+##   na ponte faz ondinhas na água do lado (até invisível).
+## - "grama": capim alto (cantos arredondados, como a água). O capim tampa metade
+##   de quem está dentro, e se mexe quando alguém passa, mesmo invisível; ele
+##   demora para voltar ao lugar, então fica um rastro.
+## - "pocas": poças rasas (não afundam). Quem anda nelas faz ondinhas, quem fica
+##   parado nelas faz uma ondinha de vez em quando, e quem sai fica com os pés
+##   molhados e deixa pegadas por um tempo. Tudo isso vale para invisíveis também.
+## - "luz": manchas de sol no chão. Dentro delas, a sombra de quem está
+##   invisível aparece.
 ## - "inicios": onde cada jogador começa (Verde, Laranja, Azul, Rosa), nessa ordem.
 ## - "upgrades_no_inicio": upgrades de língua que já estão no chão quando a rodada começa.
 ## - "pontos_upgrade": lugares onde os upgrades de língua podem aparecer depois.
@@ -34,6 +43,9 @@ const MAPAS := [
 		],
 		"agua": [],
 		"pontes": [],
+		"grama": [Rect2(130, 380, 230, 140), Rect2(1240, 380, 230, 140)],
+		"pocas": [Rect2(340, 680, 110, 70), Rect2(1150, 150, 110, 70)],
+		"luz": [Rect2(620, 320, 360, 260)],
 		"inicios": [Vector2(212, 262), Vector2(1388, 638), Vector2(1388, 262), Vector2(212, 638)],
 		"upgrades_no_inicio": [Vector2(800, 450)],
 		"pontos_upgrade": [
@@ -61,6 +73,9 @@ const MAPAS := [
 		],
 		"agua": [],
 		"pontes": [],
+		"grama": [Rect2(400, 260, 100, 140), Rect2(1100, 500, 100, 140)],
+		"pocas": [Rect2(600, 270, 110, 60), Rect2(890, 570, 110, 60)],
+		"luz": [Rect2(660, 40, 280, 140), Rect2(660, 720, 280, 140)],
 		"inicios": [Vector2(140, 140), Vector2(1460, 760), Vector2(1460, 140), Vector2(140, 760)],
 		"upgrades_no_inicio": [Vector2(645, 450), Vector2(955, 450)],
 		"pontos_upgrade": [
@@ -84,6 +99,10 @@ const MAPAS := [
 		"pontes": [
 			Rect2(470, 410, 660, 80),
 		],
+		# Juncos na beira do lago e sol em cima da ponte.
+		"grama": [Rect2(540, 110, 200, 100), Rect2(860, 690, 200, 100)],
+		"pocas": [Rect2(180, 420, 110, 70), Rect2(1310, 410, 110, 70)],
+		"luz": [Rect2(470, 380, 660, 140)],
 		"inicios": [Vector2(140, 140), Vector2(1460, 760), Vector2(1460, 140), Vector2(140, 760)],
 		"upgrades_no_inicio": [Vector2(800, 450)],
 		"pontos_upgrade": [
@@ -107,6 +126,10 @@ const MAPAS := [
 			Rect2(445, 170, 140, 90), Rect2(445, 640, 140, 90),
 			Rect2(1015, 170, 140, 90), Rect2(1015, 640, 140, 90),
 		],
+		# Duas faixas de capim no meio, com um corredor entre elas.
+		"grama": [Rect2(690, 345, 220, 70), Rect2(690, 485, 220, 70)],
+		"pocas": [Rect2(300, 700, 110, 70), Rect2(1190, 130, 110, 70)],
+		"luz": [Rect2(420, 140, 190, 150), Rect2(990, 610, 190, 150)],
 		"inicios": [Vector2(180, 180), Vector2(1420, 720), Vector2(1420, 180), Vector2(180, 720)],
 		"upgrades_no_inicio": [Vector2(800, 450)],
 		"pontos_upgrade": [
@@ -130,11 +153,35 @@ const MAPAS := [
 			Rect2(1010, 340, 220, 220),
 		],
 		"pontes": [],
+		# Sol entrando pelo teto quebrado.
+		"grama": [Rect2(80, 560, 140, 200), Rect2(1380, 140, 140, 200)],
+		"pocas": [Rect2(740, 415, 120, 70)],
+		"luz": [Rect2(620, 210, 360, 100), Rect2(620, 590, 360, 100)],
 		"inicios": [Vector2(130, 450), Vector2(1470, 450), Vector2(800, 110), Vector2(800, 790)],
 		"upgrades_no_inicio": [Vector2(800, 450)],
 		"pontos_upgrade": [
 			Vector2(480, 260), Vector2(1120, 640), Vector2(1120, 260), Vector2(480, 640),
 			Vector2(650, 450), Vector2(950, 450), Vector2(140, 140), Vector2(1460, 760),
+		],
+	},
+	{
+		"nome": "Capinzal",
+		"semente": 71,
+		"paredes": [
+			Rect2(380, 200, 60, 60), Rect2(1160, 640, 60, 60),
+			Rect2(1160, 200, 60, 60), Rect2(380, 640, 60, 60),
+		],
+		"agua": [],
+		"pontes": [],
+		# Dois campos de capim alto, com uma faixa de sol no meio.
+		"grama": [Rect2(560, 110, 480, 260), Rect2(560, 530, 480, 260)],
+		"pocas": [Rect2(220, 415, 110, 70), Rect2(1270, 415, 110, 70)],
+		"luz": [Rect2(40, 395, 1520, 110)],
+		"inicios": [Vector2(140, 140), Vector2(1460, 760), Vector2(1460, 140), Vector2(140, 760)],
+		"upgrades_no_inicio": [Vector2(800, 450)],
+		"pontos_upgrade": [
+			Vector2(260, 290), Vector2(1340, 610), Vector2(1340, 290), Vector2(260, 610),
+			Vector2(480, 450), Vector2(1120, 450), Vector2(800, 70), Vector2(800, 830),
 		],
 	},
 ]
@@ -175,8 +222,34 @@ static func afunda(mapa: Dictionary, posicao: Vector2) -> bool:
 	return na_agua(mapa, posicao + PES, MARGEM_BEIRADA)
 
 
-## O ponto está longe ("distancia" px) das paredes e da água? Serve para
-## escolher onde soltar cocô de pombo.
+## O ponto está numa poça rasa?
+static func na_poca(mapa: Dictionary, ponto: Vector2) -> bool:
+	for poca in mapa.get("pocas", []):
+		if dentro_arredondado(poca, ponto):
+			return true
+	return false
+
+
+## O ponto está em cima de uma ponte? Devolve a ponte (Rect2) ou um Rect2 vazio.
+static func ponte_em(mapa: Dictionary, ponto: Vector2) -> Rect2:
+	for ponte in mapa.get("pontes", []):
+		var retangulo: Rect2 = ponte
+		if retangulo.has_point(ponto):
+			return retangulo
+	return Rect2()
+
+
+## O ponto está numa mancha de sol?
+static func na_luz(mapa: Dictionary, ponto: Vector2) -> bool:
+	for luz in mapa.get("luz", []):
+		var retangulo: Rect2 = luz
+		if retangulo.has_point(ponto):
+			return true
+	return false
+
+
+## O ponto está longe ("distancia" px) das paredes, da água, das poças e do
+## capim alto? Serve para escolher onde soltar cocô de pombo e onde pôr enfeites.
 static func lugar_livre(mapa: Dictionary, ponto: Vector2, distancia: float) -> bool:
 	for parede in mapa.get("paredes", []):
 		var retangulo: Rect2 = parede
@@ -184,5 +257,8 @@ static func lugar_livre(mapa: Dictionary, ponto: Vector2, distancia: float) -> b
 			return false
 	for agua in mapa.get("agua", []):
 		if dentro_arredondado(agua, ponto, -distancia):
+			return false
+	for item in mapa.get("pocas", []) + mapa.get("grama", []):
+		if dentro_arredondado(item, ponto, -distancia):
 			return false
 	return true
