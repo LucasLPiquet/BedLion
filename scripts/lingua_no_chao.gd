@@ -1,6 +1,6 @@
 extends Area2D
-## Upgrade de língua no chão (tipos em linguas.gd). Um camaleão visível pega
-## se estiver com a língua básica. Ao ficar invisível ele larga o upgrade aqui.
+## Poder no chão (tipos em linguas.gd). Um camaleão visível pega se estiver
+## com a língua básica. Ao ficar invisível ele larga o poder aqui.
 
 const Linguas := preload("res://scripts/linguas.gd")
 
@@ -39,13 +39,40 @@ func _draw() -> void:
 	draw_set_transform(Vector2(0, 5), 0.0, Vector2(1.0, 0.35))
 	draw_circle(Vector2.ZERO, RAIO, Color(0, 0, 0, 0.25)) # sombra
 	draw_set_transform(Vector2(0, sin(_tempo * 3.0) * 2.0 - 4.0))
-	# Bolha com uma línguinha dentro: a longa é mais comprida, a rápida tem riscos de velocidade.
+	# Bolha com um desenhinho do poder dentro.
 	draw_circle(Vector2.ZERO, RAIO, Linguas.CONTORNO)
 	draw_circle(Vector2.ZERO, RAIO - 1.5, cor.lightened(0.5))
-	if tipo == "longa":
-		Linguas.desenhar(self, Vector2(-8, 6), Vector2(7, -6), cor, 3.0)
-	else:
-		Linguas.desenhar(self, Vector2(-4, 4), Vector2(5, -3), cor, 3.0)
-		for i in 2:
-			var y: float = -3.0 + i * 5.0
-			draw_line(Vector2(-10, y), Vector2(-6, y), Linguas.CONTORNO, 1.5, true)
+	_desenhar_icone(cor)
+
+
+func _desenhar_icone(cor: Color) -> void:
+	var escuro := Linguas.CONTORNO
+	match tipo:
+		"gancho":
+			# Língua com a ponta virada em gancho.
+			Linguas.desenhar(self, Vector2(-8, 6), Vector2(4, -4), cor, 3.0)
+			draw_arc(Vector2(6, -2), 4.0, PI, TAU + 0.6, 8, escuro, 2.0, true)
+		"grude":
+			# Gota de grude escorrendo.
+			draw_circle(Vector2(0, 1), 6.5, escuro)
+			draw_circle(Vector2(0, 1), 5.0, cor)
+			draw_circle(Vector2(3, 7), 2.5, cor)
+			draw_circle(Vector2(-2, -1), 1.6, Color(1, 1, 1, 0.8))
+		"muda":
+			# Contorno tracejado de um camaleão (a pele vazia).
+			for i in 8:
+				var angulo := TAU * i / 8.0
+				draw_arc(Vector2.ZERO, 7.5, angulo, angulo + 0.45, 3, escuro, 1.8, true)
+			draw_circle(Vector2(3, -2), 2.0, escuro)
+		"olho":
+			# Olho de camaleão: bolota com a pupila olhando para os lados.
+			draw_circle(Vector2.ZERO, 7.5, escuro)
+			draw_circle(Vector2.ZERO, 6.0, Color.WHITE)
+			draw_circle(Vector2(cos(_tempo * 2.0) * 2.5, 0), 3.0, escuro)
+		"longa":
+			Linguas.desenhar(self, Vector2(-8, 6), Vector2(7, -6), cor, 3.0)
+		_:
+			Linguas.desenhar(self, Vector2(-4, 4), Vector2(5, -3), cor, 3.0)
+			for i in 2:
+				var y: float = -3.0 + i * 5.0
+				draw_line(Vector2(-10, y), Vector2(-6, y), Linguas.CONTORNO, 1.5, true)
