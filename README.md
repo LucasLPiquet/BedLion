@@ -44,10 +44,12 @@ Quem entra, em ordem: teclado 1, teclado 2 e depois cada controle conectado. As 
 - Para ficar invisível é preciso **segurar** o botão por 1 segundo (`TEMPO_PARA_SUMIR`). Enquanto carrega, aparece um anel branco se completando e o camaleão vai ficando transparente; soltar antes cancela. Com a língua fora não dá para começar a sumir.
 - Invisível, ninguém vê o camaleão, nem o próprio jogador, e ele não pode usar a língua. Um toque no botão de invisível, ou **dar um golpe**, faz ele aparecer de novo. Por isso não dá para ficar batendo escondido: cada golpe entrega você.
 - Se uma língua pegar um camaleão invisível (por sorte), ele aparece e é puxado.
-- **Upgrades de língua**: uma bolha no centro do mapa no começo da rodada e mais uma a cada 10 segundos em um ponto sorteado (no máximo 2 no chão). Passe por cima para pegar; só dá para ter um por vez. Uma bolinha com a cor do upgrade aparece em cima da cabeça.
-  - **Roxa (longa)**: a língua vai até 520 px.
-  - **Amarela (rápida)**: a língua é bem mais rápida e puxa em 0,3 s.
-  - Ao ficar invisível, o upgrade cai no chão e você volta para a língua básica.
+- **Poderes**: uma bolha no centro do mapa no começo da rodada e mais uma a cada 10 segundos em um ponto sorteado (no máximo 2 no chão). Passe por cima para pegar; só dá para ter um por vez. O nome do poder aparece em cima de quem pegou, e uma bolinha com a cor dele fica em cima da cabeça. Ao ficar invisível, o poder cai no chão e você volta para a língua básica (menos a muda de pele, que é gasta). Todos giram em volta da língua e da invisibilidade:
+  - **Laranja (gancho)**: se a língua bater numa parede, ela gruda lá e puxa **você** até a parede, voando por cima de tudo, até da água. Serve para fugir, atravessar lagos e chegar de surpresa. Apertar a língua no meio do voo solta (e se você estiver em cima da água, afunda). A língua também vai mais longe (480 px).
+  - **Verde (grude)**: quando a língua erra (bate na parede ou chega no fim sem pegar ninguém), a ponta deixa uma bola de grude no chão. Quem pisar, **mesmo invisível**, fica preso 1,2 s e aparece. Preso não anda nem usa a língua, mas ainda golpeia. Quem soltou não gruda; cada um pode ter 2 grudes no chão (o mais antigo some) e eles duram 12 s.
+  - **Bege (muda de pele)**: um toque no botão de invisível troca de pele: você some **na hora**, sem segurar, e a pele velha fica parada no lugar, igualzinha a você. Uma língua ou um golpe estoura a pele num "puf" branco; sozinha ela murcha em 8 s.
+  - **Azul-claro (olho de camaleão)**: um círculo tracejado mostra até onde você enxerga (200 px). Quem estiver invisível lá dentro aparece como um vulto tremido, para todo mundo ver. Como ficar invisível larga o poder, quem tem o olho fica visível: é o caçador de invisíveis.
+  - Os números de cada poder ficam em `scripts/linguas.gd` (e em `scripts/grude.gd` e `scripts/casca.gd`). As línguas antigas (longa e rápida) continuam lá; para voltar com elas, coloque `"longa"` ou `"rapida"` na lista `UPGRADES`.
 - **Cocô de pombo**: a cada 4 s cai um cocô num lugar sorteado (no máximo 4 no mapa). Antes aparece uma sombra no chão por 1 s, para dar tempo de sair. Quem levar o cocô na cabeça ou pisar nele fica com os pés sujos e deixa **pegadas** por 6 s, mesmo invisível. O cocô fica 15 s no chão e as pegadas somem em 3 s (`INTERVALO_COCO`, `MAX_COCOS` em `scripts/main.gd`; `TEMPO_AVISO`, `TEMPO_PEGADAS`, `TEMPO_NO_CHAO` em `scripts/coco_pombo.gd`).
 - **Arena**: 1600 x 900 (`TAMANHO` em `scripts/main.gd`), esticada para caber na janela.
 - **Mapas**: a cada rodada o mapa muda. Os mapas de `scripts/mapas.gd` são embaralhados e saem um por vez, então todos aparecem antes de algum repetir (e nunca o mesmo duas rodadas seguidas). O nome do mapa aparece embaixo de "Rodada N". **F2** pula para o próximo mapa na hora (útil para testar).
@@ -73,8 +75,11 @@ Quem entra, em ordem: teclado 1, teclado 2 e depois cada controle conectado. As 
 - `scripts/efeito_afundar.gd`: camaleão afundando com splash quando cai na água.
 - `scripts/placar.gd`: placar no topo da tela.
 - `scripts/efeito_morte.gd`: "puf" quando um camaleão morre.
-- `scripts/linguas.gd`: tipos de língua (básica e upgrades), seus números e o desenho da língua.
-- `scripts/lingua_no_chao.gd`: upgrade de língua que pode ser pego do chão.
+- `scripts/linguas.gd`: língua básica e poderes, seus números e o desenho da língua.
+- `scripts/lingua_no_chao.gd`: bolha de poder que pode ser pega do chão.
+- `scripts/grude.gd`: bola de grude que o poder "grude" deixa no chão.
+- `scripts/casca.gd`: pele velha que o poder "muda de pele" deixa para trás.
+- `scripts/efeito_texto.gd`: nome do poder subindo em cima de quem pegou.
 - `scripts/efeito_golpe.gd`: risco visual do golpe curto.
 - `scripts/controles.gd`: teclas e botões de cada controle (autoload).
 - `arte/referencia_camaleao.jpg`: desenho de referência do camaleão.
