@@ -1,6 +1,7 @@
 extends Node2D
 ## Monta a arena, escolhe quem joga (teclados, controles e bots) e controla
 ## rodadas, placar e partida. Ganha a partida quem fizer PONTOS_PARA_VENCER.
+## A cada rodada o mapa muda (sorteado entre os de mapas.gd, sem repetir o anterior).
 
 const Camaleao := preload("res://scripts/camaleao.gd")
 const LinguaNoChao := preload("res://scripts/lingua_no_chao.gd")
@@ -8,10 +9,12 @@ const Linguas := preload("res://scripts/linguas.gd")
 const Cenario := preload("res://scripts/cenario.gd")
 const Placar := preload("res://scripts/placar.gd")
 const CocoPombo := preload("res://scripts/coco_pombo.gd")
+const Mapas := preload("res://scripts/mapas.gd")
+const Agua := preload("res://scripts/agua.gd")
 
 ## Tamanho da arena (em pixels do jogo). A janela continua do mesmo tamanho:
 ## o jogo é esticado para caber nela (veja _ready). Era 1280 x 720.
-## Se mudar, ajuste também as posições abaixo (obstáculos, upgrades e início).
+## Se mudar, ajuste também as posições dos mapas (mapas.gd).
 const TAMANHO := Vector2(1600, 900)
 const ESPESSURA_PAREDE := 40.0
 
@@ -27,38 +30,32 @@ const MAX_JOGADORES := 4
 const MODOS_BOT := ["", "parado", "andando"]
 const NOMES_MODO_BOT := ["sem bots", "bots parados", "bots andando"]
 
-const OBSTACULOS := [
-	Rect2(475, 188, 75, 200),
-	Rect2(1050, 512, 75, 200),
-	Rect2(700, 138, 200, 50),
-	Rect2(700, 712, 200, 50),
-]
-## Upgrades de língua que já estão no mapa no começo de cada rodada.
-const UPGRADES_NO_INICIO := [Vector2(800, 450)]
+## Quanto tempo o nome do mapa fica na tela no começo da rodada.
+const TEMPO_NOME_MAPA := 1.8
 
-## Upgrades de língua (sorteados entre os de linguas.gd) aparecem de tempos em tempos.
+## Upgrades de língua (sorteados entre os de linguas.gd) aparecem de tempos em tempos,
+## num dos "pontos_upgrade" do mapa (sorteado a cada vez, sem repetir um ocupado).
 const INTERVALO_UPGRADE := 10.0 # segundos entre uma aparição e outra
 const MAX_UPGRADES := 2 # quantos podem estar no chão ao mesmo tempo
-## Lugares onde eles podem aparecer (sorteado a cada vez, sem repetir um ocupado).
-const PONTOS_UPGRADE := [
-	Vector2(250, 162), Vector2(1350, 162), Vector2(250, 738), Vector2(1350, 738),
-	Vector2(800, 300), Vector2(800, 600), Vector2(625, 588), Vector2(975, 312),
-]
 
 ## Cocô de pombo (coco_pombo.gd) cai num lugar sorteado de tempos em tempos.
 const INTERVALO_COCO := 4.0 # segundos entre um cocô e outro
 const MAX_COCOS := 4 # quantos podem estar no mapa ao mesmo tempo
 
-## Visual de cada vaga de jogador, na ordem em que entram.
+## Visual de cada vaga de jogador, na ordem em que entram. Onde cada um
+## começa depende do mapa ("inicios" em mapas.gd).
 const VAGAS := [
-	{"nome": "Verde", "cor": Color(0.45, 0.82, 0.35), "inicio": Vector2(212, 262)},
-	{"nome": "Laranja", "cor": Color(0.98, 0.6, 0.25), "inicio": Vector2(1388, 638)},
-	{"nome": "Azul", "cor": Color(0.35, 0.65, 0.98), "inicio": Vector2(1388, 262)},
-	{"nome": "Rosa", "cor": Color(0.95, 0.5, 0.78), "inicio": Vector2(212, 638)},
+	{"nome": "Verde", "cor": Color(0.45, 0.82, 0.35)},
+	{"nome": "Laranja", "cor": Color(0.98, 0.6, 0.25)},
+	{"nome": "Azul", "cor": Color(0.35, 0.65, 0.98)},
+	{"nome": "Rosa", "cor": Color(0.95, 0.5, 0.78)},
 ]
 
 var placar: Array = []
-var _jogadores: Array = [] # cada um: {"nome", "cor", "inicio", "controle", "bot"}
+var _jogadores: Array = [] # cada um: {"nome", "cor", "controle", "bot"}
+var _indice_mapa := -1 # qual dos Mapas.MAPAS está em jogo
+var _mapa: Dictionary = {}
+var _arena: Node2D # desenho e paredes do mapa atual (trocado a cada rodada)
 var _modo_bot := 0
 var _rodada: Node2D
 var _numero_rodada := 0
@@ -66,13 +63,13 @@ var _vivos: Array = []
 var _rodada_acabou := false
 var _placar: Placar
 var _rotulo_mensagem: Label
+var _rotulo_mapa: Label
 var _rotulo_ajuda: Label
 
 
 func _ready() -> void:
 	# A tela mostra a arena inteira (TAMANHO), seja qual for o tamanho da janela.
 	get_window().content_scale_size = Vector2i(TAMANHO)
-	_montar_arena()
 	_montar_hud()
 	Input.joy_connection_changed.connect(_ao_mudar_controles)
 	_nova_partida()
@@ -90,19 +87,46 @@ func _ao_mudar_controles(_aparelho: int, _conectado: bool) -> void:
 	_nova_partida()
 
 
+## Sorteia o mapa da rodada: qualquer um, menos o que acabou de ser jogado.
+func _trocar_mapa() -> void:
+	var opcoes: Array = []
+	for i in Mapas.MAPAS.size():
+		if i != _indice_mapa:
+			opcoes.append(i)
+	if opcoes.is_empty(): # só existe um mapa
+		opcoes.append(0)
+	_indice_mapa = opcoes.pick_random()
+	_mapa = Mapas.MAPAS[_indice_mapa]
+	_montar_arena()
+
+
+## Apaga o mapa anterior e monta o atual: desenho, brilho da água e paredes.
 func _montar_arena() -> void:
+	if _arena:
+		remove_child(_arena) # tira as paredes antigas na hora
+		_arena.queue_free()
+	_arena = Node2D.new()
+	add_child(_arena)
+	move_child(_arena, 0)
+
 	var cenario := Cenario.new()
 	cenario.tamanho = TAMANHO
 	cenario.espessura = ESPESSURA_PAREDE
-	cenario.obstaculos = OBSTACULOS
-	add_child(cenario)
+	cenario.mapa = _mapa
+	_arena.add_child(cenario)
+
+	var agua := Agua.new()
+	agua.mapa = _mapa
+	agua.tamanho = TAMANHO
+	agua.espessura = ESPESSURA_PAREDE
+	_arena.add_child(agua)
 
 	var e := ESPESSURA_PAREDE
 	_criar_parede(Rect2(0, 0, TAMANHO.x, e))
 	_criar_parede(Rect2(0, TAMANHO.y - e, TAMANHO.x, e))
 	_criar_parede(Rect2(0, 0, e, TAMANHO.y))
 	_criar_parede(Rect2(TAMANHO.x - e, 0, e, TAMANHO.y))
-	for retangulo in OBSTACULOS:
+	for retangulo in _mapa["paredes"]:
 		_criar_parede(retangulo)
 
 
@@ -116,7 +140,7 @@ func _criar_parede(retangulo: Rect2) -> void:
 	caixa.size = retangulo.size
 	forma.shape = caixa
 	corpo.add_child(forma)
-	add_child(corpo)
+	_arena.add_child(corpo)
 
 
 func _montar_hud() -> void:
@@ -129,6 +153,10 @@ func _montar_hud() -> void:
 
 	_rotulo_mensagem = _criar_rotulo(Vector2(0, TAMANHO.y / 2.0 - 60), 48, 12)
 	hud.add_child(_rotulo_mensagem)
+
+	_rotulo_mapa = _criar_rotulo(Vector2(0, TAMANHO.y / 2.0 + 4), 30, 9)
+	_rotulo_mapa.add_theme_color_override("font_color", Color(1.0, 0.92, 0.6))
+	hud.add_child(_rotulo_mapa)
 
 	_rotulo_ajuda = _criar_rotulo(Vector2(0, TAMANHO.y - 32), 16, 5)
 	hud.add_child(_rotulo_ajuda)
@@ -196,13 +224,15 @@ func _nova_rodada() -> void:
 	_rodada = Node2D.new()
 	_rodada.y_sort_enabled = true # quem está mais embaixo aparece na frente
 	add_child(_rodada)
+	_trocar_mapa()
 	_numero_rodada += 1
 	_rodada_acabou = false
 	_vivos.clear()
 	_atualizar_placar()
 	_mostrar_mensagem("Rodada %d" % _numero_rodada, 1.2)
+	_mostrar_texto(_rotulo_mapa, _mapa["nome"], TEMPO_NOME_MAPA)
 
-	for posicao in UPGRADES_NO_INICIO:
+	for posicao in _mapa["upgrades_no_inicio"]:
 		_criar_upgrade(posicao)
 
 	var relogio := Timer.new()
@@ -219,7 +249,7 @@ func _nova_rodada() -> void:
 
 	for i in _jogadores.size():
 		var dados: Dictionary = _jogadores[i]
-		var inicio: Vector2 = dados["inicio"]
+		var inicio: Vector2 = _mapa["inicios"][i]
 		var camaleao := Camaleao.new()
 		camaleao.controle = dados["controle"]
 		camaleao.bot = dados["bot"]
@@ -227,6 +257,7 @@ func _nova_rodada() -> void:
 		camaleao.position = inicio
 		camaleao.direcao = Vector2.RIGHT if inicio.x < TAMANHO.x / 2.0 else Vector2.LEFT
 		camaleao.mundo = _rodada
+		camaleao.mapa = _mapa
 		camaleao.set_meta("indice", i)
 		camaleao.morreu.connect(_ao_morrer)
 		_rodada.add_child(camaleao)
@@ -243,7 +274,7 @@ func _spawnar_upgrade() -> void:
 	if no_chao.size() >= MAX_UPGRADES:
 		return
 	var livres: Array = []
-	for ponto in PONTOS_UPGRADE:
+	for ponto in _mapa["pontos_upgrade"]:
 		var ocupado := false
 		for existente in no_chao:
 			if existente.position.distance_to(ponto) < 40.0:
@@ -255,18 +286,14 @@ func _spawnar_upgrade() -> void:
 	_criar_upgrade(livres.pick_random())
 
 
-## Sorteia um lugar livre no chão (longe das paredes e dos blocos) e solta um cocô lá.
+## Sorteia um lugar livre no chão (longe das paredes, dos blocos e da água) e solta um cocô lá.
 func _spawnar_coco() -> void:
 	if _rodada_acabou or get_tree().get_nodes_in_group("cocos").size() >= MAX_COCOS:
 		return
 	var margem := ESPESSURA_PAREDE + 30.0
 	for _tentativa in 20:
 		var ponto := Vector2(randf_range(margem, TAMANHO.x - margem), randf_range(margem, TAMANHO.y - margem))
-		var livre := true
-		for retangulo in OBSTACULOS:
-			if retangulo.grow(30.0).has_point(ponto):
-				livre = false
-		if livre:
+		if Mapas.lugar_livre(_mapa, ponto, 30.0):
 			var coco := CocoPombo.new()
 			coco.position = ponto
 			_rodada.add_child(coco)
@@ -311,11 +338,16 @@ func _ao_morrer(camaleao: Node) -> void:
 
 
 func _mostrar_mensagem(texto: String, duracao: float) -> void:
-	_rotulo_mensagem.text = texto
+	_mostrar_texto(_rotulo_mensagem, texto, duracao)
+
+
+## Mostra o texto no rótulo e apaga depois de "duracao" segundos (se ninguém trocou antes).
+func _mostrar_texto(rotulo: Label, texto: String, duracao: float) -> void:
+	rotulo.text = texto
 	var tempo := get_tree().create_timer(duracao)
 	tempo.timeout.connect(func() -> void:
-		if _rotulo_mensagem.text == texto:
-			_rotulo_mensagem.text = ""
+		if rotulo.text == texto:
+			rotulo.text = ""
 	)
 
 
