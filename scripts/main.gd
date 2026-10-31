@@ -1,7 +1,8 @@
 extends Node2D
 ## Monta a arena, escolhe quem joga (teclados, controles e bots) e controla
 ## rodadas, placar e partida. Ganha a partida quem fizer PONTOS_PARA_VENCER.
-## A cada rodada o mapa muda (sorteado entre os de mapas.gd, sem repetir o anterior).
+## A cada rodada o mapa muda: os mapas de mapas.gd são embaralhados e saem um
+## por vez, então todos aparecem antes de algum repetir. F2 pula para o próximo mapa.
 
 const Camaleao := preload("res://scripts/camaleao.gd")
 const LinguaNoChao := preload("res://scripts/lingua_no_chao.gd")
@@ -54,6 +55,7 @@ const VAGAS := [
 var placar: Array = []
 var _jogadores: Array = [] # cada um: {"nome", "cor", "controle", "bot"}
 var _indice_mapa := -1 # qual dos Mapas.MAPAS está em jogo
+var _proximos_mapas: Array = [] # índices que ainda vão sair nesta volta (embaralhados)
 var _mapa: Dictionary = {}
 var _arena: Node2D # desenho e paredes do mapa atual (trocado a cada rodada)
 var _modo_bot := 0
@@ -77,9 +79,14 @@ func _ready() -> void:
 
 func _unhandled_input(evento: InputEvent) -> void:
 	var tecla := evento as InputEventKey
-	if tecla and tecla.pressed and not tecla.echo and tecla.keycode == KEY_F1:
+	if not (tecla and tecla.pressed and not tecla.echo):
+		return
+	if tecla.keycode == KEY_F1:
 		_modo_bot = (_modo_bot + 1) % MODOS_BOT.size()
 		_nova_partida()
+	elif tecla.keycode == KEY_F2:
+		# Pula para o próximo mapa (começa uma rodada nova, sem ponto para ninguém).
+		_nova_rodada()
 
 
 func _ao_mudar_controles(_aparelho: int, _conectado: bool) -> void:
@@ -87,15 +94,18 @@ func _ao_mudar_controles(_aparelho: int, _conectado: bool) -> void:
 	_nova_partida()
 
 
-## Sorteia o mapa da rodada: qualquer um, menos o que acabou de ser jogado.
+## Escolhe o mapa da rodada. Os mapas saem de uma "sacola" embaralhada: só
+## quando todos já foram jogados ela é enchida e embaralhada de novo. Assim todo
+## mapa aparece a cada volta e o mesmo nunca sai duas vezes seguidas.
 func _trocar_mapa() -> void:
-	var opcoes: Array = []
-	for i in Mapas.MAPAS.size():
-		if i != _indice_mapa:
-			opcoes.append(i)
-	if opcoes.is_empty(): # só existe um mapa
-		opcoes.append(0)
-	_indice_mapa = opcoes.pick_random()
+	if _proximos_mapas.is_empty():
+		for i in Mapas.MAPAS.size():
+			_proximos_mapas.append(i)
+		_proximos_mapas.shuffle()
+		# Não começar a volta nova com o mapa que acabou de ser jogado.
+		if _proximos_mapas.size() > 1 and _proximos_mapas[0] == _indice_mapa:
+			_proximos_mapas.push_back(_proximos_mapas.pop_front())
+	_indice_mapa = _proximos_mapas.pop_front()
 	_mapa = Mapas.MAPAS[_indice_mapa]
 	_montar_arena()
 
@@ -206,6 +216,7 @@ func _escolher_jogadores() -> void:
 			como = "bot " + jogador["bot"]
 		partes.append("%s: %s" % [jogador["nome"], como])
 	partes.append("F1: %s" % NOMES_MODO_BOT[_modo_bot])
+	partes.append("F2: próximo mapa")
 	_rotulo_ajuda.text = "(golpe / invisível / língua)    " + "    |    ".join(partes)
 
 

@@ -18,6 +18,7 @@ Quem entra, em ordem: teclado 1, teclado 2 e depois cada controle conectado. As 
 | Teclado 2 | Setas | `.` (ou Numpad 1) | `,` (ou Numpad 2) | `;` no teclado brasileiro, `/` no americano (ou Numpad 3) |
 | Controle | Analógico esquerdo ou direcional | A ou RB | B, LB ou LT | X ou RT |
 
+- **F2** pula para o próximo mapa (começa uma rodada nova, sem ponto para ninguém).
 - **F1** troca o modo dos bots de teste: sem bots → bots parados → bots andando. Os bots completam até 4 jogadores. Trocar o modo recomeça a partida.
 - Conectar ou desconectar um controle também recomeça a partida com os jogadores novos.
 - Para jogar com um teclado só, tire um item da lista `TECLADOS` no topo de `scripts/main.gd`.
@@ -49,7 +50,7 @@ Quem entra, em ordem: teclado 1, teclado 2 e depois cada controle conectado. As 
   - Ao ficar invisível, o upgrade cai no chão e você volta para a língua básica.
 - **Cocô de pombo**: a cada 4 s cai um cocô num lugar sorteado (no máximo 4 no mapa). Antes aparece uma sombra no chão por 1 s, para dar tempo de sair. Quem levar o cocô na cabeça ou pisar nele fica com os pés sujos e deixa **pegadas** por 6 s, mesmo invisível. O cocô fica 15 s no chão e as pegadas somem em 3 s (`INTERVALO_COCO`, `MAX_COCOS` em `scripts/main.gd`; `TEMPO_AVISO`, `TEMPO_PEGADAS`, `TEMPO_NO_CHAO` em `scripts/coco_pombo.gd`).
 - **Arena**: 1600 x 900 (`TAMANHO` em `scripts/main.gd`), esticada para caber na janela.
-- **Mapas**: a cada rodada o mapa muda, sorteado entre os mapas de `scripts/mapas.gd` (nunca o mesmo duas rodadas seguidas). O nome do mapa aparece embaixo de "Rodada N".
+- **Mapas**: a cada rodada o mapa muda. Os mapas de `scripts/mapas.gd` são embaralhados e saem um por vez, então todos aparecem antes de algum repetir (e nunca o mesmo duas rodadas seguidas). O nome do mapa aparece embaixo de "Rodada N". **F2** pula para o próximo mapa na hora (útil para testar).
   - **Jardim**: o mapa original, aberto, com 4 blocos de pedra.
   - **Labirinto**: muitos muros e corredores.
   - **Lago**: um lago grande no meio com uma ponte atravessando.
