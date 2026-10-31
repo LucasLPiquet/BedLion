@@ -49,6 +49,14 @@ Quem entra, em ordem: teclado 1, teclado 2 e depois cada controle conectado. As 
   - Ao ficar invisível, o upgrade cai no chão e você volta para a língua básica.
 - **Cocô de pombo**: a cada 4 s cai um cocô num lugar sorteado (no máximo 4 no mapa). Antes aparece uma sombra no chão por 1 s, para dar tempo de sair. Quem levar o cocô na cabeça ou pisar nele fica com os pés sujos e deixa **pegadas** por 6 s, mesmo invisível. O cocô fica 15 s no chão e as pegadas somem em 3 s (`INTERVALO_COCO`, `MAX_COCOS` em `scripts/main.gd`; `TEMPO_AVISO`, `TEMPO_PEGADAS`, `TEMPO_NO_CHAO` em `scripts/coco_pombo.gd`).
 - **Arena**: 1600 x 900 (`TAMANHO` em `scripts/main.gd`), esticada para caber na janela.
+- **Mapas**: a cada rodada o mapa muda, sorteado entre os mapas de `scripts/mapas.gd` (nunca o mesmo duas rodadas seguidas). O nome do mapa aparece embaixo de "Rodada N".
+  - **Jardim**: o mapa original, aberto, com 4 blocos de pedra.
+  - **Labirinto**: muitos muros e corredores.
+  - **Lago**: um lago grande no meio com uma ponte atravessando.
+  - **Rios**: dois rios de cima a baixo, cada um com duas pontes.
+  - **Ruínas**: muros espalhados e dois laguinhos redondos.
+  - **Água**: quem pisar na água afunda e morre (também se for puxado pela língua para dentro dela). A língua passa por cima da água. Pontes são seguras. Upgrades e cocô de pombo nunca caem na água nem nas paredes.
+  - Para criar um mapa novo, copie um dos blocos de `scripts/mapas.gd` e mude o nome e as posições. As explicações de cada campo estão no topo do arquivo.
   - Intervalo, limite e pontos ficam no topo de `scripts/main.gd`.
 
 ## Estrutura
@@ -58,7 +66,10 @@ Quem entra, em ordem: teclado 1, teclado 2 e depois cada controle conectado. As 
 - `scripts/camaleao.gd`: movimento, língua, invisibilidade, golpe e o bot de teste.
 - `scripts/desenho_camaleao.gd`: desenho do camaleão (feito com formas, sem imagem).
 - `scripts/coco_pombo.gd` e `scripts/pegada.gd`: cocô de pombo que cai do céu e as pegadas de quem pisa nele.
-- `scripts/cenario.gd`: desenho do mapa (chão, cerca viva, blocos de pedra, enfeites).
+- `scripts/mapas.gd`: lista de mapas (paredes, água, pontes, onde cada um começa, onde caem os upgrades).
+- `scripts/cenario.gd`: desenho do mapa (chão, cerca viva, blocos de pedra, água, pontes, enfeites).
+- `scripts/agua.gd`: brilhinhos que piscam na água.
+- `scripts/efeito_afundar.gd`: camaleão afundando com splash quando cai na água.
 - `scripts/placar.gd`: placar no topo da tela.
 - `scripts/efeito_morte.gd`: "puf" quando um camaleão morre.
 - `scripts/linguas.gd`: tipos de língua (básica e upgrades), seus números e o desenho da língua.
