@@ -49,8 +49,8 @@ Quem entra, em ordem: teclado 1, teclado 2 e depois cada controle conectado. As 
     - A língua volta com a bolha um pouco mais devagar (`VELOCIDADE_TRAZER_ITEM` em `scripts/camaleao.gd`). Enquanto ela está na língua, ninguém pega passando por cima.
     - Se alguém passar por cima da língua, ela é cortada e a bolha cai ali. Se você soltar a língua (ou for pego, ou morrer) no meio do caminho, ela também cai onde estava; em cima da água, afunda e some.
     - Se a ponta encostar num camaleão e numa bolha no mesmo instante, ela fica com o que estiver mais perto.
-  - **Laranja (gancho)**: se a língua bater numa parede, ela gruda lá e puxa **você** até a parede, voando por cima de tudo, até da água. Serve para fugir, atravessar lagos e chegar de surpresa. Apertar a língua no meio do voo solta (e se você estiver em cima da água, afunda). A língua também vai mais longe (480 px).
-  - **Verde (grude)**: quando a língua erra (bate na parede ou chega no fim sem pegar ninguém), a ponta deixa uma bola de grude no chão. Quem pisar, **mesmo invisível**, fica preso 1,2 s e aparece. Preso não anda nem usa a língua, mas ainda golpeia. Quem soltou não gruda; cada um pode ter 2 grudes no chão (o mais antigo some) e eles duram 12 s.
+  - **Laranja (gancho)**: a língua vira um grappling. Se ela bater numa parede, gruda lá e puxa **você** até a parede, voando por cima de tudo, até da água. Durante o voo, o direcional balança você para os lados (dá para fazer curva). Apertar a língua no meio do voo solta e você sai **arremessado** com o embalo, que vai freando; dá para emendar outro gancho antes de cair. Se o embalo acabar em cima da água, você afunda. A língua também vai mais longe (480 px).
+  - **Verde (grude)**: quando a língua erra (bate na parede ou chega no fim sem pegar ninguém), deixa um **rastro de grude** por todo o caminho que ela fez (menos em cima da água). Quem pisar, **mesmo invisível**, fica preso 1,2 s e aparece; só o pedaço pisado some, o resto do rastro continua. Preso não anda nem usa a língua, mas ainda golpeia, e logo depois de se soltar tem um instante para sair sem grudar de novo. Quem soltou não gruda; cada um pode ter 2 rastros no chão (o mais antigo some) e eles duram 10 s.
   - **Bege (muda de pele)**: um toque no botão de invisível troca de pele: você some **na hora**, sem segurar, e a pele velha fica parada no lugar, igualzinha a você. Uma língua ou um golpe estoura a pele num "puf" branco; sozinha ela murcha em 8 s.
   - **Azul-claro (olho de camaleão)**: um círculo tracejado mostra até onde você enxerga (200 px). Quem estiver invisível lá dentro aparece como um vulto tremido, para todo mundo ver. Como ficar invisível larga o poder, quem tem o olho fica visível: é o caçador de invisíveis.
   - Os números de cada poder ficam em `scripts/linguas.gd` (e em `scripts/grude.gd` e `scripts/casca.gd`). As línguas antigas (longa e rápida) continuam lá; para voltar com elas, coloque `"longa"` ou `"rapida"` na lista `UPGRADES`.
@@ -90,7 +90,7 @@ Quem entra, em ordem: teclado 1, teclado 2 e depois cada controle conectado. As 
 - `scripts/efeito_morte.gd`: "puf" quando um camaleão morre.
 - `scripts/linguas.gd`: língua básica e poderes, seus números e o desenho da língua.
 - `scripts/lingua_no_chao.gd`: bolha de poder que pode ser pega do chão.
-- `scripts/grude.gd`: bola de grude que o poder "grude" deixa no chão.
+- `scripts/grude.gd`: rastro de grude que o poder "grude" deixa no chão.
 - `scripts/casca.gd`: pele velha que o poder "muda de pele" deixa para trás.
 - `scripts/efeito_texto.gd`: nome do poder subindo em cima de quem pegou.
 - `scripts/efeito_golpe.gd`: risco visual do golpe curto.
