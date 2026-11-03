@@ -12,6 +12,9 @@ const Placar := preload("res://scripts/placar.gd")
 const CocoPombo := preload("res://scripts/coco_pombo.gd")
 const Mapas := preload("res://scripts/mapas.gd")
 const Agua := preload("res://scripts/agua.gd")
+const GramaAlta := preload("res://scripts/grama_alta.gd")
+const Luz := preload("res://scripts/luz.gd")
+const Pistas := preload("res://scripts/pistas.gd")
 
 ## Tamanho da arena (em pixels do jogo). A janela continua do mesmo tamanho:
 ## o jogo é esticado para caber nela (veja _ready). Era 1280 x 720.
@@ -110,7 +113,8 @@ func _trocar_mapa() -> void:
 	_montar_arena()
 
 
-## Apaga o mapa anterior e monta o atual: desenho, brilho da água e paredes.
+## Apaga o mapa anterior e monta o atual: desenho, brilho da água, sol,
+## capim alto e paredes.
 func _montar_arena() -> void:
 	if _arena:
 		remove_child(_arena) # tira as paredes antigas na hora
@@ -130,6 +134,14 @@ func _montar_arena() -> void:
 	agua.tamanho = TAMANHO
 	agua.espessura = ESPESSURA_PAREDE
 	_arena.add_child(agua)
+
+	# Sol (mostra a sombra de quem está invisível) e capim alto (se mexe quando alguém passa).
+	var luz := Luz.new()
+	luz.mapa = _mapa
+	_arena.add_child(luz)
+	var grama := GramaAlta.new()
+	grama.mapa = _mapa
+	_arena.add_child(grama)
 
 	var e := ESPESSURA_PAREDE
 	_criar_parede(Rect2(0, 0, TAMANHO.x, e))
@@ -236,6 +248,9 @@ func _nova_rodada() -> void:
 	_rodada.y_sort_enabled = true # quem está mais embaixo aparece na frente
 	add_child(_rodada)
 	_trocar_mapa()
+	var pistas := Pistas.new() # ondinhas e pegadas molhadas (pistas.gd)
+	pistas.mapa = _mapa
+	_rodada.add_child(pistas)
 	_numero_rodada += 1
 	_rodada_acabou = false
 	_vivos.clear()

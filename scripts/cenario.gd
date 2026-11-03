@@ -1,6 +1,8 @@
 extends Node2D
 ## Desenha o mapa: chão de ladrilhos com musgo, cerca viva em volta, blocos de
-## pedra, água com pontes e enfeites (tufos de grama, flores, pedrinhas). É só
+## pedra, água com pontes, o chão do capim alto, poças e enfeites (tufos de
+## grama, flores, pedrinhas). As folhas do capim alto que se mexem ficam em
+## grama_alta.gd e as manchas de sol em luz.gd. É só
 ## visual: as colisões das paredes são criadas em main.gd e quem afunda na água
 ## é conferido em camaleao.gd. Tudo sorteado com a semente do mapa (mapas.gd),
 ## então cada mapa fica sempre igual.
@@ -24,6 +26,9 @@ const COR_AGUA_RASA := Color(0.38, 0.70, 0.85)
 const COR_FOLHA_LAGO := Color(0.35, 0.62, 0.28)
 const COR_MADEIRA := Color(0.62, 0.42, 0.24)
 const LARGURA_BEIRADA := 10.0
+const COR_CHAO_CAPIM := Color(0.33, 0.48, 0.20)
+const COR_LAMA := Color(0.50, 0.42, 0.29)
+const COR_POCA := Color(0.42, 0.62, 0.72, 0.85)
 
 var tamanho := Vector2(1280, 720)
 var espessura := 32.0
@@ -45,6 +50,10 @@ func _draw() -> void:
 	rng.seed = mapa.get("semente", 7)
 	_desenhar_chao(rng)
 	_desenhar_musgo(rng)
+	for capim in mapa.get("grama", []):
+		_forma_arredondada(capim, 6.0, COR_CHAO_CAPIM.darkened(0.15))
+		_forma_arredondada(capim, 0.0, COR_CHAO_CAPIM)
+	_desenhar_pocas()
 	_desenhar_agua(rng)
 	_desenhar_enfeites(rng)
 	for ponte in pontes:
@@ -163,6 +172,16 @@ func _desenhar_agua(rng: RandomNumberGenerator) -> void:
 			if rng.randf() < 0.4: # florzinha
 				draw_circle(ponto + Vector2.from_angle(giro + PI) * raio * 0.4, 3.5, Color(1.0, 0.75, 0.85))
 				draw_circle(ponto + Vector2.from_angle(giro + PI) * raio * 0.4, 1.5, Color(1.0, 0.9, 0.4))
+
+
+## Poças rasas: lama em volta, água clarinha e um reflexo.
+func _desenhar_pocas() -> void:
+	for item in mapa.get("pocas", []):
+		var poca: Rect2 = item
+		_forma_arredondada(poca, 6.0, COR_LAMA)
+		_forma_arredondada(poca, 0.0, COR_POCA)
+		var reflexo := Rect2(poca.position + poca.size * Vector2(0.2, 0.25), poca.size * Vector2(0.35, 0.18))
+		_forma_arredondada(reflexo, 0.0, Color(1, 1, 1, 0.25))
 
 
 ## Um ponto sorteado dentro do pedaço de água, longe da beirada ("folga" px),
