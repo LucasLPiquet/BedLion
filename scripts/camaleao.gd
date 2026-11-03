@@ -65,6 +65,12 @@ const DISTANCIA_ENTRE_PEGADAS := 24.0
 ## A língua volta com um upgrade preso nela nesta fração da velocidade normal
 ## (um pouco mais devagar, para dar tempo de alguém cortar e roubar).
 const VELOCIDADE_TRAZER_ITEM := 0.7
+## Poder "gancho": depois de soltar a língua no meio do voo, o embalo vai
+## diminuindo nesta taxa (px/s por segundo). Maior = para mais rápido.
+const FREIO_EMBALO := 1900.0
+## Grudado num grude, depois de se soltar fica tantos segundos sem grudar de novo
+## (para dar tempo de sair de cima do rastro).
+const IMUNE_GRUDE := 0.6
 
 var controle := "teclado1" # prefixo das ações em controles.gd
 var bot := "" # "" = jogador de verdade; "parado" ou "andando" = bot de teste
@@ -89,6 +95,9 @@ var _cor_pes := Pegada.COR # cor das pegadas (cocô ou água)
 var _andado_desde_pegada := 0.0
 var _pe_esquerdo := true # as pegadas alternam um lado e o outro
 var _tempo_grudado := 0.0 # segundos que ainda fica preso num grude
+var _imune_grude := 0.0 # segundos que ainda não gruda (acabou de se soltar)
+var _embalo := Vector2.ZERO # velocidade que sobrou de um voo de gancho solto no meio
+var _entrada_gancho := Vector2.ZERO # direção apertada enquanto voa com o gancho
 var _tempo_olho := 0.0 # animação do vulto que o poder "olho" mostra
 
 # Língua lançada por este camaleão.
@@ -136,8 +145,9 @@ func _physics_process(delta: float) -> void:
 	_recarga_golpe -= delta
 	_recarga_lingua -= delta
 	_recarga_invisibilidade -= delta
-	# Voando com o gancho passa por cima da água; só afunda se cair nela.
-	if _estado_lingua != "gancho" and Mapas.afunda(mapa, position):
+	# Voando com o gancho (ou ainda no embalo dele) passa por cima da água;
+	# só afunda se cair nela.
+	if not _voando() and Mapas.afunda(mapa, position):
 		_morrer(true)
 		return
 
@@ -174,17 +184,27 @@ func _physics_process(delta: float) -> void:
 	if _tempo_grudado > 0.0:
 		# Preso no grude: não anda, não usa a língua nem some, mas ainda pode golpear.
 		_tempo_grudado -= delta
+		if _tempo_grudado <= 0.0:
+			_imune_grude = IMUNE_GRUDE
 		entrada = Vector2.ZERO
 		quer_lingua = false
 		apertou_invisivel = false
 		segurando_invisivel = false
 
+	_imune_grude -= delta
 	if _estado_lingua != "":
 		# Com a língua fora fica parado; apertar a língua de novo solta.
+		# No gancho, o direcional balança o voo para os lados, e soltar no meio
+		# do caminho mantém o embalo (dá para se arremessar).
+		_entrada_gancho = entrada
 		entrada = Vector2.ZERO
 		quer_golpear = false
 		if quer_lingua:
-			soltar_lingua(RECARGA_SOLTAR)
+			if _estado_lingua == "gancho":
+				_embalo = velocity
+				soltar_lingua(RECARGA_LINGUA)
+			else:
+				soltar_lingua(RECARGA_SOLTAR)
 			quer_lingua = false
 	else:
 		if entrada != Vector2.ZERO:
@@ -193,10 +213,17 @@ func _physics_process(delta: float) -> void:
 			direcao = _bot_mirar
 	if absf(direcao.x) > 0.1:
 		_olhando_direita = direcao.x > 0.0
-	velocity = entrada * VELOCIDADE
+	velocity = entrada * VELOCIDADE + _embalo
+	_embalo = _embalo.move_toward(Vector2.ZERO, FREIO_EMBALO * delta)
 	if _estado_lingua == "gancho":
-		velocity = position.direction_to(_ponta) * float(_dados_lingua["velocidade_voo"])
+		var para_parede := position.direction_to(_ponta)
+		var para_o_lado := _entrada_gancho - para_parede * _entrada_gancho.dot(para_parede)
+		velocity = para_parede * float(_dados_lingua["velocidade_voo"]) \
+			+ para_o_lado * float(_dados_lingua["velocidade_balanco"])
 	move_and_slide()
+	if _embalo != Vector2.ZERO and get_slide_collision_count() > 0:
+		# Bateu numa parede no embalo: perde a parte que ia contra ela.
+		_embalo = _embalo.slide(get_slide_collision(0).get_normal())
 	_passo = _passo + delta * 14.0 if entrada != Vector2.ZERO else 0.0
 	_tempo_olho += delta
 	_deixar_pegadas(delta)
@@ -309,6 +336,7 @@ func _mover_lingua(delta: float) -> void:
 			elif not batida.is_empty() and _dados_lingua.has("velocidade_voo"):
 				_estado_lingua = "gancho" # gruda na parede e puxa quem lançou
 				_tempo_gancho = 0.0
+				_embalo = Vector2.ZERO # o voo novo manda (dá para emendar ganchos)
 			elif not batida.is_empty() or _percorrido >= _dados_lingua["alcance"]:
 				_estado_lingua = "voltando"
 				if _dados_lingua.has("max_grudes"):
@@ -350,7 +378,7 @@ func _mover_lingua(delta: float) -> void:
 				soltar_lingua(RECARGA_SOLTAR) # o upgrade cai onde a língua foi cortada
 		"gancho":
 			_tempo_gancho += delta
-			var tempo_maximo: float = _dados_lingua["alcance"] / _dados_lingua["velocidade_voo"] + 0.3
+			var tempo_maximo: float = _dados_lingua["alcance"] / _dados_lingua["velocidade_voo"] + 0.6
 			# Chegou na parede (ou enroscou numa quina): solta e cai ali.
 			if position.distance_to(_ponta) <= RAIO + 8.0 or _tempo_gancho >= tempo_maximo \
 					or (_tempo_gancho > 0.15 and get_real_velocity().length() < 60.0):
@@ -435,10 +463,13 @@ func _casca_no_caminho(de: Vector2, ate: Vector2) -> Node:
 	return null
 
 
-## Poder "grude": deixa uma bola de grude onde a ponta parou (nunca na água).
-## Se já tiver grudes demais no chão, o mais antigo some.
+## Poder "grude": deixa um rastro de grude por todo o caminho da língua, do
+## corpo até onde a ponta parou (nunca em cima da água).
+## Se já tiver rastros demais no chão, o mais antigo some.
 func _soltar_grude(onde: Vector2) -> void:
-	if Mapas.na_agua(mapa, onde):
+	var comeco := position + position.direction_to(onde) * RAIO
+	var pontos := Grude.pontos_no_caminho(comeco, onde, mapa)
+	if pontos.is_empty():
 		return
 	var meus: Array = []
 	for existente in get_tree().get_nodes_in_group("grudes"):
@@ -448,7 +479,7 @@ func _soltar_grude(onde: Vector2) -> void:
 		meus[0].queue_free()
 	var grude := Grude.new()
 	grude.dono = self
-	grude.position = onde
+	grude.pontos = pontos
 	mundo.add_child(grude)
 
 
@@ -498,6 +529,7 @@ func ser_puxado(quem: Node, velocidade: float) -> void:
 		_aparecer()
 	_carga_invisivel = 0.0
 	_tempo_grudado = 0.0 # a língua arranca do grude
+	_embalo = Vector2.ZERO
 	modulate.a = 1.0
 	puxado_por = quem
 	_velocidade_puxada = velocidade
@@ -616,7 +648,7 @@ func _deixar_pegadas(delta: float) -> void:
 ## Chamado por um grude (grude.gd) quando este camaleão pisa nele. Fica preso e,
 ## se estava invisível, aparece. Quem está sendo puxado passa por cima sem grudar.
 func grudar(segundos: float) -> bool:
-	if not vivo or _sendo_puxado() or _estado_lingua == "gancho":
+	if not vivo or _sendo_puxado() or _voando() or _imune_grude > 0.0:
 		return false
 	_tempo_grudado = segundos
 	if invisivel:
@@ -624,6 +656,11 @@ func grudar(segundos: float) -> bool:
 	_carga_invisivel = 0.0
 	modulate.a = 1.0
 	return true
+
+
+## Voando com o gancho, ou ainda arremessado pelo embalo dele (mais rápido que andando).
+func _voando() -> bool:
+	return _estado_lingua == "gancho" or _embalo.length() > VELOCIDADE
 
 
 # --- Poderes (upgrades de língua) -------------------------------------------

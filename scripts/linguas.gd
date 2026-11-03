@@ -11,10 +11,12 @@ extends RefCounted
 ##
 ## Poderes (o que cada um faz está em camaleao.gd, grude.gd e casca.gd):
 ## - gancho: se a língua bater numa parede, ela gruda lá e puxa VOCÊ até a
-##   parede, voando por cima de qualquer coisa, até da água. Se a língua for
-##   solta no meio do caminho em cima da água, você afunda.
-## - grude: quando a língua erra, a ponta deixa uma bola de grude no chão.
-##   Quem pisar (até invisível) fica preso e aparece. Quem soltou não gruda.
+##   parede, voando por cima de qualquer coisa, até da água. No voo, o direcional
+##   balança para os lados. Soltar a língua no meio do voo te arremessa com o
+##   embalo; se o embalo acabar em cima da água, você afunda.
+## - grude: quando a língua erra, deixa um rastro de grude por todo o caminho
+##   que ela fez. Quem pisar (até invisível) fica preso e aparece; só o pedaço
+##   pisado some. Quem soltou não gruda.
 ## - muda: um toque no botão de invisível troca de pele na hora: você some sem
 ##   precisar segurar, e a pele velha fica parada no lugar, igualzinha a você.
 ## - olho: os olhos de camaleão giram para todo lado. Quem estiver invisível
@@ -31,11 +33,12 @@ const TIPOS := {
 		"nome": "Gancho", "alcance": 480.0, "velocidade": 1400.0, "tempo_puxada": 0.5,
 		"cor": Color(0.95, 0.55, 0.15),
 		"velocidade_voo": 950.0, # px/s voando até a parede
+		"velocidade_balanco": 450.0, # px/s para o lado quando aperta o direcional no voo
 	},
 	"grude": {
 		"nome": "Grude", "alcance": 360.0, "velocidade": 1100.0, "tempo_puxada": 0.5,
 		"cor": Color(0.55, 0.85, 0.2),
-		"max_grudes": 2, # bolas de grude de um mesmo camaleão no chão ao mesmo tempo
+		"max_grudes": 2, # rastros de grude de um mesmo camaleão no chão ao mesmo tempo
 	},
 	"muda": {
 		"nome": "Muda de pele", "alcance": 330.0, "velocidade": 1100.0, "tempo_puxada": 0.5,
