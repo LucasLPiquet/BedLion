@@ -1,36 +1,23 @@
 # BedLion
 
-Jogo 2D de multiplayer local (tela compartilhada) no estilo Boomerang Fu, feito em Godot 4 com GDScript.
-Cada jogador é um camaleão com uma língua que puxa os outros e um golpe de perto que mata. Dá para ficar invisível, mas aí só sobra o golpe.
+Jogo 2D multijogador local de arena (tela compartilhada) para até 4 jogadores.
+
+Cada jogador controla um camaleão com duas ações principais: lançar a língua para puxar os adversários e desferir um golpe de curta distância para eliminá-los. Também é possível utilizar camuflagem para ficar temporariamente invisível. O último jogador que restar na arena pontua na rodada.
+
+## Tecnologias
+
+- **Motor:** Godot Engine 4.3+
+- **Linguagem:** GDScript
 
 ## Como rodar
 
-Abra a pasta no Godot 4.3 (ou mais novo) e aperte F5.
+### Pré-requisitos
+- [Godot Engine](https://godotengine.org/) versão 4.3 ou superior.
 
-## Jogadores e controles
-
-Até 4 jogadores. Cada um joga com uma metade do teclado ou com um controle (Xbox ou parecido).
-Quem entra, em ordem: teclado 1, teclado 2 e depois cada controle conectado. As cores das vagas são Verde, Laranja, Azul e Rosa.
-
-| Controle | Mover | Golpe | Invisível | Língua |
-|---|---|---|---|---|
-| Teclado 1 | W A S D | F | G | H |
-| Teclado 2 | Setas | `.` (ou Numpad 1) | `,` (ou Numpad 2) | `;` no teclado brasileiro, `/` no americano (ou Numpad 3) |
-| Controle | Analógico esquerdo ou direcional | A ou RB | B, LB ou LT | X ou RT |
-
-- **F2** pula para o próximo mapa (começa uma rodada nova, sem ponto para ninguém).
-- **F1** troca o modo dos bots de teste: sem bots → bots parados → bots andando. Os bots completam até 4 jogadores. Trocar o modo recomeça a partida.
-- Conectar ou desconectar um controle também recomeça a partida com os jogadores novos.
-- Para jogar com um teclado só, tire um item da lista `TECLADOS` no topo de `scripts/main.gd`.
-- As teclas e botões ficam em `scripts/controles.gd`.
-
-## Partida
-
-- Quem sobrar vivo ganha a rodada e 1 ponto. A próxima rodada começa sozinha depois de 2 segundos.
-- Quem fizer 5 pontos ganha a partida, e uma nova começa depois de 4 segundos. O número fica em `PONTOS_PARA_VENCER` (`scripts/main.gd`).
-- O placar fica no topo da tela: uma bolinha preenchida por ponto.
-
-## Regras do protótipo
+### Execução
+1. Abra o Godot Engine.
+2. Clique em **Importar** e selecione o arquivo `project.godot` na raiz deste projeto.
+3. Pressione **F5** para iniciar o jogo.
 
 - Cada camaleão tem dois ataques: a **língua** e o **golpe**.
 - **Língua** (só visível): sai reta da boca, vai até uns 330 px e volta. Se pegar outro camaleão, puxa ele até você em 0,5 s. A língua **não mata**: a ideia é trazer o outro para perto e dar o golpe. Se bater numa parede (ou na pedra do meio), ela para ali e volta, sem puxar ninguém; ela não pega quem está atrás de parede, e se uma parede ficar no meio enquanto puxa, ela solta.
@@ -72,7 +59,7 @@ Quem entra, em ordem: teclado 1, teclado 2 e depois cada controle conectado. As 
   - Para criar um mapa novo, copie um dos blocos de `scripts/mapas.gd` e mude o nome e as posições. As explicações de cada campo estão no topo do arquivo.
   - Intervalo, limite e pontos ficam no topo de `scripts/main.gd`.
 
-## Estrutura
+O jogo suporta até 4 participantes simultâneos via teclado e controles externos:
 
 - `scenes/main.tscn`: cena principal (a arena é montada por código).
 - `scripts/main.gd`: arena, quem joga, rodadas e placar.
@@ -97,4 +84,6 @@ Quem entra, em ordem: teclado 1, teclado 2 e depois cada controle conectado. As 
 - `scripts/controles.gd`: teclas e botões de cada controle (autoload).
 - `arte/referencia_camaleao.jpg`: desenho de referência do camaleão.
 
-A arte ainda é toda desenhada por código com `_draw()`. Quando houver um PNG do camaleão, dá para trocar o desenho de `desenho_camaleao.gd` por um sprite.
+### Atalhos
+- **F1:** Alterna o preenchimento de vagas com bots de teste.
+- **F2:** Reinicia a rodada no próximo mapa.
