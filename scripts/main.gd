@@ -37,9 +37,11 @@ const NOMES_MODO_BOT := ["sem bots", "bots parados", "bots andando"]
 ## Quanto tempo o nome do mapa fica na tela no começo da rodada.
 const TEMPO_NOME_MAPA := 1.8
 
-## Upgrades de língua (sorteados entre os de linguas.gd) aparecem de tempos em tempos,
-## num dos "pontos_upgrade" do mapa (sorteado a cada vez, sem repetir um ocupado).
-const INTERVALO_UPGRADE := 10.0 # segundos entre uma aparição e outra
+## Upgrades de língua (sorteados entre os de linguas.gd) aparecem num dos "pontos_upgrade"
+## do mapa (sorteado a cada vez, sem repetir um ocupado). A rodada começa sem nenhum:
+## cada número abaixo é quantos segundos depois do começo da rodada um aparece.
+## Depois do último não aparece mais nenhum naquela rodada.
+const TEMPOS_UPGRADE: Array[float] = [5.0, 10.0]
 const MAX_UPGRADES := 2 # quantos podem estar no chão ao mesmo tempo
 
 ## Cocô de pombo (coco_pombo.gd) cai num lugar sorteado de tempos em tempos.
@@ -258,14 +260,13 @@ func _nova_rodada() -> void:
 	_mostrar_mensagem("Rodada %d" % _numero_rodada, 1.2)
 	_mostrar_texto(_rotulo_mapa, _mapa["nome"], TEMPO_NOME_MAPA)
 
-	for posicao in _mapa["upgrades_no_inicio"]:
-		_criar_upgrade(posicao)
-
-	var relogio := Timer.new()
-	relogio.wait_time = INTERVALO_UPGRADE
-	relogio.autostart = true
-	relogio.timeout.connect(_spawnar_upgrade)
-	_rodada.add_child(relogio)
+	for tempo in TEMPOS_UPGRADE:
+		var relogio := Timer.new()
+		relogio.wait_time = tempo
+		relogio.one_shot = true
+		relogio.autostart = true
+		relogio.timeout.connect(_spawnar_upgrade)
+		_rodada.add_child(relogio)
 
 	var relogio_coco := Timer.new()
 	relogio_coco.wait_time = INTERVALO_COCO
