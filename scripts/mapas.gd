@@ -39,6 +39,11 @@ const MAPAS := [
 			Rect2(1050, 512, 75, 200),
 			Rect2(700, 138, 200, 50),
 			Rect2(700, 712, 200, 50),
+			# Mais cobertura: os outros dois pilares, um bloco no meio do sol
+			# e dois muros curtos saindo da cerca.
+			Rect2(1050, 188, 75, 200), Rect2(475, 512, 75, 200),
+			Rect2(770, 420, 60, 60),
+			Rect2(1000, 20, 50, 130), Rect2(550, 750, 50, 130),
 		],
 		"agua": [],
 		"pontes": [],
@@ -68,6 +73,7 @@ const MAPAS := [
 			Rect2(775, 360, 50, 180), Rect2(700, 425, 200, 50),
 			# Blocos soltos.
 			Rect2(230, 590, 50, 50), Rect2(1320, 260, 50, 50),
+			Rect2(230, 260, 50, 50), Rect2(1320, 590, 50, 50),
 		],
 		"agua": [],
 		"pontes": [],
@@ -87,6 +93,11 @@ const MAPAS := [
 			Rect2(250, 190, 70, 70), Rect2(1280, 640, 70, 70),
 			Rect2(1280, 190, 70, 70), Rect2(250, 640, 70, 70),
 			Rect2(770, 70, 60, 60), Rect2(770, 770, 60, 60),
+			# Pilares dos dois lados da ponte, para se esconder antes de atravessar.
+			Rect2(330, 330, 40, 90), Rect2(330, 480, 40, 90),
+			Rect2(1230, 330, 40, 90), Rect2(1230, 480, 40, 90),
+			# Muretas em cima e embaixo do lago.
+			Rect2(950, 100, 120, 40), Rect2(530, 760, 120, 40),
 		],
 		# Um lago grande e oval no meio.
 		"agua": [
@@ -112,6 +123,11 @@ const MAPAS := [
 		"paredes": [
 			Rect2(760, 240, 80, 80), Rect2(760, 580, 80, 80),
 			Rect2(240, 425, 120, 50), Rect2(1240, 425, 120, 50),
+			# Muretas na entrada das pontes, para esperar escondido.
+			Rect2(340, 150, 40, 100), Rect2(340, 650, 40, 100),
+			Rect2(1220, 150, 40, 100), Rect2(1220, 650, 40, 100),
+			# Blocos no meio, perto da cerca.
+			Rect2(900, 90, 50, 90), Rect2(650, 720, 50, 90),
 		],
 		# Dois rios de cima a baixo (passam por baixo da cerca).
 		"agua": [
@@ -124,7 +140,7 @@ const MAPAS := [
 		],
 		# Duas faixas de capim no meio, com um corredor entre elas.
 		"grama": [Rect2(690, 345, 220, 70), Rect2(690, 485, 220, 70)],
-		"pocas": [Rect2(300, 700, 110, 70), Rect2(1190, 130, 110, 70)],
+		"pocas": [Rect2(150, 560, 110, 70), Rect2(1340, 270, 110, 70)],
 		"luz": [Rect2(420, 140, 190, 150), Rect2(990, 610, 190, 150)],
 		"inicios": [Vector2(180, 180), Vector2(1420, 720), Vector2(1420, 180), Vector2(180, 720)],
 		"pontos_upgrade": [
@@ -141,6 +157,7 @@ const MAPAS := [
 			Rect2(240, 140, 50, 150), Rect2(1310, 610, 50, 150),
 			Rect2(1310, 140, 50, 150), Rect2(240, 610, 50, 150),
 			Rect2(770, 330, 60, 60), Rect2(770, 510, 60, 60),
+			Rect2(110, 290, 80, 40), Rect2(1410, 570, 80, 40),
 		],
 		# Dois laguinhos redondos, um de cada lado.
 		"agua": [
@@ -164,6 +181,10 @@ const MAPAS := [
 		"paredes": [
 			Rect2(380, 200, 60, 60), Rect2(1160, 640, 60, 60),
 			Rect2(1160, 200, 60, 60), Rect2(380, 640, 60, 60),
+			# Muretas em volta das poças e um bloco no meio do sol.
+			Rect2(200, 330, 140, 40), Rect2(200, 530, 140, 40),
+			Rect2(1260, 330, 140, 40), Rect2(1260, 530, 140, 40),
+			Rect2(770, 420, 60, 60),
 		],
 		"agua": [],
 		"pontes": [],
