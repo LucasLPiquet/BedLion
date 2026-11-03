@@ -25,7 +25,6 @@ extends RefCounted
 ## - "luz": manchas de sol no chão. Dentro delas, a sombra de quem está
 ##   invisível aparece.
 ## - "inicios": onde cada jogador começa (Verde, Laranja, Azul, Rosa), nessa ordem.
-## - "upgrades_no_inicio": upgrades de língua que já estão no chão quando a rodada começa.
 ## - "pontos_upgrade": lugares onde os upgrades de língua podem aparecer depois.
 ## - "semente": muda o sorteio dos enfeites (flores, grama) do desenho do mapa.
 ##
@@ -47,7 +46,6 @@ const MAPAS := [
 		"pocas": [Rect2(340, 680, 110, 70), Rect2(1150, 150, 110, 70)],
 		"luz": [Rect2(620, 320, 360, 260)],
 		"inicios": [Vector2(212, 262), Vector2(1388, 638), Vector2(1388, 262), Vector2(212, 638)],
-		"upgrades_no_inicio": [Vector2(800, 450)],
 		"pontos_upgrade": [
 			Vector2(250, 162), Vector2(1350, 162), Vector2(250, 738), Vector2(1350, 738),
 			Vector2(800, 300), Vector2(800, 600), Vector2(625, 588), Vector2(975, 312),
@@ -77,7 +75,6 @@ const MAPAS := [
 		"pocas": [Rect2(600, 270, 110, 60), Rect2(890, 570, 110, 60)],
 		"luz": [Rect2(660, 40, 280, 140), Rect2(660, 720, 280, 140)],
 		"inicios": [Vector2(140, 140), Vector2(1460, 760), Vector2(1460, 140), Vector2(140, 760)],
-		"upgrades_no_inicio": [Vector2(645, 450), Vector2(955, 450)],
 		"pontos_upgrade": [
 			Vector2(800, 110), Vector2(800, 790), Vector2(450, 450), Vector2(1150, 450),
 			Vector2(640, 300), Vector2(960, 600), Vector2(960, 300), Vector2(640, 600),
@@ -104,7 +101,6 @@ const MAPAS := [
 		"pocas": [Rect2(180, 420, 110, 70), Rect2(1310, 410, 110, 70)],
 		"luz": [Rect2(470, 380, 660, 140)],
 		"inicios": [Vector2(140, 140), Vector2(1460, 760), Vector2(1460, 140), Vector2(140, 760)],
-		"upgrades_no_inicio": [Vector2(800, 450)],
 		"pontos_upgrade": [
 			Vector2(400, 450), Vector2(1200, 450), Vector2(800, 160), Vector2(800, 740),
 			Vector2(400, 120), Vector2(1200, 780), Vector2(1200, 120), Vector2(400, 780),
@@ -131,7 +127,6 @@ const MAPAS := [
 		"pocas": [Rect2(300, 700, 110, 70), Rect2(1190, 130, 110, 70)],
 		"luz": [Rect2(420, 140, 190, 150), Rect2(990, 610, 190, 150)],
 		"inicios": [Vector2(180, 180), Vector2(1420, 720), Vector2(1420, 180), Vector2(180, 720)],
-		"upgrades_no_inicio": [Vector2(800, 450)],
 		"pontos_upgrade": [
 			Vector2(800, 120), Vector2(800, 780), Vector2(660, 450), Vector2(940, 450),
 			Vector2(300, 300), Vector2(1300, 600), Vector2(1300, 300), Vector2(300, 600),
@@ -158,7 +153,6 @@ const MAPAS := [
 		"pocas": [Rect2(740, 415, 120, 70)],
 		"luz": [Rect2(620, 210, 360, 100), Rect2(620, 590, 360, 100)],
 		"inicios": [Vector2(130, 450), Vector2(1470, 450), Vector2(800, 110), Vector2(800, 790)],
-		"upgrades_no_inicio": [Vector2(800, 450)],
 		"pontos_upgrade": [
 			Vector2(480, 260), Vector2(1120, 640), Vector2(1120, 260), Vector2(480, 640),
 			Vector2(650, 450), Vector2(950, 450), Vector2(140, 140), Vector2(1460, 760),
@@ -178,7 +172,6 @@ const MAPAS := [
 		"pocas": [Rect2(220, 415, 110, 70), Rect2(1270, 415, 110, 70)],
 		"luz": [Rect2(40, 395, 1520, 110)],
 		"inicios": [Vector2(140, 140), Vector2(1460, 760), Vector2(1460, 140), Vector2(140, 760)],
-		"upgrades_no_inicio": [Vector2(800, 450)],
 		"pontos_upgrade": [
 			Vector2(260, 290), Vector2(1340, 610), Vector2(1340, 290), Vector2(260, 610),
 			Vector2(480, 450), Vector2(1120, 450), Vector2(800, 70), Vector2(800, 830),
