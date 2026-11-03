@@ -24,7 +24,7 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	var t := _tempo / DURACAO
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.5))
-	for atraso in [0.0, 0.3]:
+	for atraso: float in [0.0, 0.3]:
 		var u := t - atraso
 		if u <= 0.0:
 			continue
