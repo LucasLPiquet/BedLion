@@ -32,3 +32,9 @@ O jogo suporta até 4 participantes simultâneos via teclado e controles externo
 ### Atalhos
 - **F1:** Alterna o preenchimento de vagas com bots de teste.
 - **F2:** Reinicia a rodada no próximo mapa.
+
+## Documentação
+
+Para consultas técnicas e regras completas:
+- [Regras do Jogo](docs/regras.md)
+- [Arquitetura do Projeto](docs/arquitetura.md)
