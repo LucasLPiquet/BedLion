@@ -48,6 +48,10 @@ Quem entra, em ordem: teclado 1, teclado 2 e depois cada controle conectado. As 
   - **Roxa (longa)**: a língua vai até 520 px.
   - **Amarela (rápida)**: a língua é bem mais rápida e puxa em 0,3 s.
   - Ao ficar invisível, o upgrade cai no chão e você volta para a língua básica.
+  - **Puxar com a língua**: a língua também pega upgrades no chão de longe (inclusive o que um invisível acabou de largar) e traz até a sua boca. Se você está com a língua básica, já pega na hora; se já tem um upgrade, o que veio cai aos seus pés.
+    - A língua volta com o upgrade um pouco mais devagar (`VELOCIDADE_TRAZER_ITEM` em `scripts/camaleao.gd`). Enquanto ele está na língua, ninguém pega passando por cima.
+    - Se alguém passar por cima da língua, ela é cortada e o upgrade cai ali. Se você soltar a língua (ou for pego, ou morrer) no meio do caminho, ele também cai onde estava; em cima da água, ele afunda e some.
+    - Se a ponta encostar num camaleão e num upgrade no mesmo instante, ela fica com o que estiver mais perto.
 - **Cocô de pombo**: a cada 4 s cai um cocô num lugar sorteado (no máximo 4 no mapa). Antes aparece uma sombra no chão por 1 s, para dar tempo de sair. Quem levar o cocô na cabeça ou pisar nele fica com os pés sujos e deixa **pegadas** por 6 s, mesmo invisível. O cocô fica 15 s no chão e as pegadas somem em 3 s (`INTERVALO_COCO`, `MAX_COCOS` em `scripts/main.gd`; `TEMPO_AVISO`, `TEMPO_PEGADAS`, `TEMPO_NO_CHAO` em `scripts/coco_pombo.gd`).
 - **Arena**: 1600 x 900 (`TAMANHO` em `scripts/main.gd`), esticada para caber na janela.
 - **Mapas**: a cada rodada o mapa muda. Os mapas de `scripts/mapas.gd` são embaralhados e saem um por vez, então todos aparecem antes de algum repetir (e nunca o mesmo duas rodadas seguidas). O nome do mapa aparece embaixo de "Rodada N". **F2** pula para o próximo mapa na hora (útil para testar).

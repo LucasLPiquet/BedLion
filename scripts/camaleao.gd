@@ -2,7 +2,8 @@ extends CharacterBody2D
 ## Um camaleão controlado por um jogador (teclado ou controle) ou por um bot.
 ## Dois ataques:
 ## - Língua (só visível): sai reta da boca, vai até o alcance e volta. Se pegar
-##   outro camaleão, puxa ele até a boca. A língua sozinha não mata: é para trazer
+##   outro camaleão, puxa ele até a boca. Se pegar um upgrade de língua no chão
+##   (inclusive o que um invisível largou), traz ele até a boca e já pega. A língua sozinha não mata: é para trazer
 ##   o outro para perto e dar o golpe. Enquanto ela está fora, quem lançou fica
 ##   parado. Apertar de novo solta, e a língua fica RECARGA_SOLTAR segundos sem
 ##   poder ser usada. Quem foi pego pode se soltar com a língua ou com o golpe,
@@ -57,6 +58,9 @@ const TEMPO_PARA_SUMIR := 1.0
 const RECARGA_INVISIBILIDADE := 0.5
 ## Com os pés sujos, deixa uma pegada a cada tantos pixels andados.
 const DISTANCIA_ENTRE_PEGADAS := 24.0
+## A língua volta com um upgrade preso nela nesta fração da velocidade normal
+## (um pouco mais devagar, para dar tempo de alguém cortar e roubar).
+const VELOCIDADE_TRAZER_ITEM := 0.7
 
 var controle := "teclado1" # prefixo das ações em controles.gd
 var bot := "" # "" = jogador de verdade; "parado" ou "andando" = bot de teste
@@ -81,11 +85,12 @@ var _andado_desde_pegada := 0.0
 var _pe_esquerdo := true # as pegadas alternam um lado e o outro
 
 # Língua lançada por este camaleão.
-var _estado_lingua := "" # "" = na boca; "indo", "voltando" ou "puxando"
+var _estado_lingua := "" # "" = na boca; "indo", "voltando", "puxando" ou "trazendo"
 var _ponta := Vector2.ZERO # posição da ponta, no mundo
 var _percorrido := 0.0
 var _dados_lingua: Dictionary = {} # números da língua no momento em que saiu
 var _preso: Node = null # quem a língua pegou
+var _item: Node = null # upgrade de língua que a língua está trazendo
 var _tempo_puxando := 0.0
 var _desenho_lingua: Node2D # desenha a língua por cima de todos os camaleões
 
@@ -247,10 +252,20 @@ func _mover_lingua(delta: float) -> void:
 			if not batida.is_empty():
 				nova = batida["position"] # a ponta para na parede
 			var pego := _camaleao_no_caminho(_ponta, nova)
+			var item := _item_no_caminho(_ponta, nova)
+			# Se pegou os dois no mesmo passo, fica com o que estiver mais perto da boca.
+			if pego and item:
+				var ate_pego := _ponta.distance_to(pego.position)
+				if _ponta.distance_to(item.position) < ate_pego:
+					pego = null
+				else:
+					item = null
 			_ponta = nova
 			_percorrido += passo
 			if pego:
 				_comecar_puxada(pego)
+			elif item:
+				_comecar_a_trazer(item)
 			elif not batida.is_empty() or _percorrido >= _dados_lingua["alcance"]:
 				_estado_lingua = "voltando"
 		"voltando":
@@ -270,11 +285,24 @@ func _mover_lingua(delta: float) -> void:
 			if position.distance_to(_preso.position) <= DISTANCIA_FIM_PUXADA \
 					or _tempo_puxando >= _dados_lingua["tempo_puxada"] + 0.4:
 				soltar_lingua(RECARGA_LINGUA)
-			elif LINGUA_PODE_SER_CORTADA and _alguem_cortou():
+			elif LINGUA_PODE_SER_CORTADA and _alguem_cortou(_preso.position):
 				soltar_lingua(RECARGA_SOLTAR)
 			elif _bate_em_parede(position, _preso.position):
 				# Uma parede ficou no meio (ele foi arrastado por uma quina): solta.
 				soltar_lingua(RECARGA_LINGUA)
+		"trazendo":
+			if not is_instance_valid(_item):
+				soltar_lingua(RECARGA_LINGUA)
+				return
+			var passo: float = _dados_lingua["velocidade"] * VELOCIDADE_TRAZER_ITEM * delta
+			var boca := _boca()
+			if _ponta.distance_to(boca) <= passo:
+				_receber_item()
+				return
+			_ponta = _ponta.move_toward(boca, passo)
+			_item.position = _ponta
+			if LINGUA_PODE_SER_CORTADA and _alguem_cortou(_ponta):
+				soltar_lingua(RECARGA_SOLTAR) # o upgrade cai onde a língua foi cortada
 
 
 ## Onde a linha de "de" até "ate" bate numa parede ({} se não bate).
@@ -308,6 +336,43 @@ func _camaleao_no_caminho(de: Vector2, ate: Vector2) -> Node:
 	return melhor
 
 
+## Primeiro upgrade de língua no chão que a ponta encosta indo de "de" até "ate"
+## (o mesmo vale para os que invisíveis largaram). Não pega através de parede
+## nem um que já esteja na língua de outro.
+func _item_no_caminho(de: Vector2, ate: Vector2) -> Node:
+	var melhor: Node = null
+	var melhor_distancia := INF
+	for item in get_tree().get_nodes_in_group("upgrades_no_chao"):
+		if item.na_lingua or item.is_queued_for_deletion():
+			continue
+		var perto := Geometry2D.get_closest_point_to_segment(item.position, de, ate)
+		if perto.distance_to(item.position) <= LinguaNoChao.RAIO + RAIO_PONTA \
+				and not _bate_em_parede(position, item.position):
+			var distancia := de.distance_to(perto)
+			if distancia < melhor_distancia:
+				melhor = item
+				melhor_distancia = distancia
+	return melhor
+
+
+func _comecar_a_trazer(item: Node) -> void:
+	_estado_lingua = "trazendo"
+	_item = item
+	item.na_lingua = true
+	item.position = _ponta
+
+
+## O upgrade chegou na boca: pega na hora se estiver com a língua básica;
+## se já tiver um upgrade, o que veio cai no chão aos pés dele.
+func _receber_item() -> void:
+	var item := _item
+	soltar_lingua(RECARGA_LINGUA) # solta o item onde está a ponta (na boca)
+	if is_instance_valid(item) and pegar_upgrade(item):
+		item.queue_free()
+	elif is_instance_valid(item):
+		item.position = position
+
+
 func _comecar_puxada(alvo: Node) -> void:
 	_estado_lingua = "puxando"
 	_preso = alvo
@@ -317,25 +382,31 @@ func _comecar_puxada(alvo: Node) -> void:
 	alvo.ser_puxado(self, falta / _dados_lingua["tempo_puxada"])
 
 
-## Um terceiro camaleão encostando na língua esticada corta ela.
-func _alguem_cortou() -> bool:
+## Um terceiro camaleão encostando na língua esticada (da boca até "ponta") corta ela.
+func _alguem_cortou(ponta: Vector2) -> bool:
 	var boca := _boca()
 	for outro in get_tree().get_nodes_in_group("camaleoes"):
 		if outro == self or outro == _preso or not outro.vivo:
 			continue
-		var perto := Geometry2D.get_closest_point_to_segment(outro.position, boca, _preso.position)
+		var perto := Geometry2D.get_closest_point_to_segment(outro.position, boca, ponta)
 		if perto.distance_to(outro.position) <= RAIO:
 			return true
 	return false
 
 
-## Recolhe a língua na hora (soltando quem estiver preso nela).
+## Recolhe a língua na hora (soltando quem estiver preso nela). Um upgrade
+## que ela estava trazendo cai onde a ponta estava (e afunda se for na água).
 func soltar_lingua(recarga: float) -> void:
 	if _estado_lingua == "":
 		return
 	if is_instance_valid(_preso) and _preso.puxado_por == self:
 		_preso.puxado_por = null
 	_preso = null
+	if is_instance_valid(_item):
+		_item.na_lingua = false
+		if Mapas.na_agua(mapa, _item.position):
+			_item.afundar()
+	_item = null
 	_estado_lingua = ""
 	_recarga_lingua = recarga
 	_desenho_lingua.queue_redraw()
@@ -522,6 +593,12 @@ func _pensar_bot(delta: float) -> void:
 			_bot_mover = para_alvo.normalized()
 			var alcance: float = Linguas.TIPOS[lingua]["alcance"]
 			_bot_lingua = _estado_lingua == "" and distancia < alcance and randf() < 0.4
+	elif lingua == Linguas.BASICA and _estado_lingua == "" and _item_ao_alcance():
+		# Sem inimigo à vista: puxa um upgrade com a língua.
+		var item: Node2D = _item_ao_alcance()
+		_bot_mover = Vector2.ZERO
+		_bot_mirar = position.direction_to(item.position)
+		_bot_lingua = randf() < 0.5
 	else:
 		_bot_mover = _direcao_sem_agua()
 	if travado:
@@ -536,6 +613,17 @@ func _direcao_sem_agua() -> Vector2:
 			break
 		escolhida = Vector2.from_angle(randf() * TAU)
 	return escolhida
+
+
+## Upgrade no chão mais perto, dentro do alcance da língua e sem parede no meio.
+func _item_ao_alcance() -> Node2D:
+	var alcance: float = Linguas.TIPOS[lingua]["alcance"]
+	var lista: Array = []
+	for item in get_tree().get_nodes_in_group("upgrades_no_chao"):
+		if not item.na_lingua and position.distance_to(item.position) < alcance \
+				and not _bate_em_parede(position, item.position):
+			lista.append(item)
+	return _mais_perto(lista)
 
 
 func _inimigos_visiveis() -> Array:
