@@ -64,6 +64,9 @@ func _process(delta: float) -> void:
 	for camaleao in get_tree().get_nodes_in_group("camaleoes"):
 		if camaleao.vivo:
 			pes.append(camaleao.position + PES)
+	for casca in get_tree().get_nodes_in_group("cascas"):
+		if not casca.is_queued_for_deletion():
+			pes.append(casca.position + PES)
 	for folha in _folhas:
 		var base: Vector2 = folha[0]
 		var alvo := 0.0
