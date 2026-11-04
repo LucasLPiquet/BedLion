@@ -327,23 +327,31 @@ func _mover_lingua(delta: float) -> void:
 				nova = batida["position"] # a ponta para na parede
 			var pego := _camaleao_no_caminho(_ponta, nova)
 			var item := _item_no_caminho(_ponta, nova)
-			# Se pegou os dois no mesmo passo, fica com o que estiver mais perto da boca.
-			if pego and item:
-				var ate_pego := _ponta.distance_to(pego.position)
-				if _ponta.distance_to(item.position) < ate_pego:
+			var casca := _casca_no_caminho(_ponta, nova)
+			# Se pegou mais de um no mesmo passo, fica com o que estiver mais perto da ponta.
+			var d_pego := _ponta.distance_to(pego.position) if pego else INF
+			var d_item := _ponta.distance_to(item.position) if item else INF
+			var d_casca := _ponta.distance_to(casca.position) if casca else INF
+			var min_d := minf(d_pego, minf(d_item, d_casca))
+			if min_d != INF:
+				if min_d == d_casca:
 					pego = null
+					item = null
+				elif min_d == d_item:
+					pego = null
+					casca = null
 				else:
 					item = null
-			var casca := _casca_no_caminho(_ponta, nova)
+					casca = null
 			_ponta = nova
 			_percorrido += passo
-			if pego:
+			if casca:
+				casca.estourar() # era só a pele velha de alguém
+				_estado_lingua = "voltando"
+			elif pego:
 				_comecar_puxada(pego)
 			elif item:
 				_comecar_a_trazer(item)
-			elif casca:
-				casca.estourar() # era só a pele velha de alguém
-				_estado_lingua = "voltando"
 			elif not batida.is_empty() and _dados_lingua.has("velocidade_voo"):
 				_estado_lingua = "gancho" # gruda na parede e puxa quem lançou
 				_tempo_gancho = 0.0
@@ -464,14 +472,21 @@ func _receber_item() -> void:
 		item.position = position
 
 
-## Pele velha (poder "muda") que a ponta encosta indo de "de" até "ate".
+## Pele velha (poder "muda") mais próxima que a ponta encosta indo de "de" até "ate".
 func _casca_no_caminho(de: Vector2, ate: Vector2) -> Node:
+	var melhor: Node = null
+	var melhor_distancia := INF
 	for casca in get_tree().get_nodes_in_group("cascas"):
+		if casca.is_queued_for_deletion():
+			continue
 		var perto := Geometry2D.get_closest_point_to_segment(casca.position, de, ate)
 		if perto.distance_to(casca.position) <= Casca.RAIO + RAIO_PONTA \
 				and not _bate_em_parede(position, casca.position):
-			return casca
-	return null
+			var distancia := de.distance_to(perto)
+			if distancia < melhor_distancia:
+				melhor = casca
+				melhor_distancia = distancia
+	return melhor
 
 
 ## Poder "grude": deixa um rastro de grude por todo o caminho da língua, do

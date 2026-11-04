@@ -440,9 +440,16 @@ func _olhar(passou: float) -> void:
 			_memoria.erase(outro)
 			_estava_invisivel[outro] = false
 			continue
-		# Acabou de sumir na frente dele: lembra onde foi.
-		if _estava_invisivel.get(outro, false) == false and randf() < 0.4 + deteccao * 0.6:
-			_memoria[outro] = {"pos": outro.position, "vel": Vector2.ZERO, "idade": 0.0}
+		# Acabou de sumir na frente dele: lembra onde foi (a menos que tenha usado muda de pele,
+		# caso em que a casca fica no lugar e o bot só descobre se notar pista visual).
+		if _estava_invisivel.get(outro, false) == false:
+			var usou_muda := false
+			for casca in eu.get_tree().get_nodes_in_group("cascas"):
+				if not casca.is_queued_for_deletion() and casca.position.distance_to(outro.position) < 50.0:
+					usou_muda = true
+					break
+			if not usou_muda and randf() < 0.4 + deteccao * 0.6:
+				_memoria[outro] = {"pos": outro.position, "vel": Vector2.ZERO, "idade": 0.0}
 		_estava_invisivel[outro] = true
 		var erro := _pista_de(outro)
 		if erro >= 0.0 and randf() < deteccao:

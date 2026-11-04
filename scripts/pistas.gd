@@ -60,9 +60,24 @@ func _physics_process(delta: float) -> void:
 		else:
 			estado["andado"] = 0.0
 
-	for camaleao in _estado.keys():
-		if not is_instance_valid(camaleao):
-			_estado.erase(camaleao)
+	for casca in get_tree().get_nodes_in_group("cascas"):
+		if casca.is_queued_for_deletion():
+			continue
+		if not _estado.has(casca):
+			_estado[casca] = {"antes": casca.position, "andado": 0.0, "parado": 0.0}
+		var estado_c: Dictionary = _estado[casca]
+		var pes_c: Vector2 = casca.position + PES
+		if Mapas.na_poca(mapa, pes_c):
+			estado_c["parado"] += delta
+			if estado_c["parado"] >= INTERVALO_ONDA_PARADO:
+				estado_c["parado"] = 0.0
+				_ondinha(pes_c, 0.6)
+		else:
+			estado_c["parado"] = 0.0
+
+	for item in _estado.keys():
+		if not is_instance_valid(item) or item.is_queued_for_deletion():
+			_estado.erase(item)
 
 
 ## Ondinha na água ao lado da ponte, na altura de quem anda (um lado sorteado).
