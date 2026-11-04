@@ -167,7 +167,7 @@ func _physics_process(delta: float) -> void:
 			apertou_invisivel = acoes["apertou_invisivel"]
 			segurando_invisivel = acoes["segurando_invisivel"]
 		# O bot não anda para dentro da água (mas pode virar para ela).
-		if entrada != Vector2.ZERO and Mapas.afunda(mapa, position + entrada.normalized() * 40.0):
+		if entrada != Vector2.ZERO and Mapas.caminho_afunda(mapa, position, position + entrada.normalized() * 40.0):
 			direcao = entrada.normalized()
 			entrada = Vector2.ZERO
 	else:
