@@ -96,3 +96,18 @@ func descricao(controle: String) -> String:
 	if controle.begins_with("pad"):
 		return "controle %d, A/B/X" % (int(controle.substr(3)) + 1)
 	return "bot"
+
+
+## Nomes curtos dos botões para mostrar na tela (lobby).
+const NOMES_TECLADO := {
+	"teclado1": {"golpe": "F", "invisivel": "G", "lingua": "H", "lados": "A/D", "cima_baixo": "W/S"},
+	"teclado2": {"golpe": ".", "invisivel": ",", "lingua": ";", "lados": "direcional", "cima_baixo": "direcional"},
+}
+const NOMES_PAD := {"golpe": "A", "invisivel": "B", "lingua": "X", "lados": "direcional", "cima_baixo": "direcional"}
+
+
+## Nome curto do botão de uma ação para mostrar na tela (ex.: "F", ".", "A").
+func nome_botao(controle: String, acao: String) -> String:
+	if NOMES_TECLADO.has(controle):
+		return NOMES_TECLADO[controle].get(acao, "?")
+	return NOMES_PAD.get(acao, "?")

@@ -4,7 +4,7 @@ extends Control
 
 const Desenho := preload("res://scripts/desenho_camaleao.gd")
 
-var jogadores: Array = [] # cada um: {"nome": String, "cor": Color}
+var jogadores: Array = [] # cada um: {"nome": String, "cor": Color, "bot": String}
 var pontos: Array = []
 var meta := 5
 
@@ -40,6 +40,8 @@ func _draw() -> void:
 		Desenho.desenhar(self, Transform2D(0.0, Vector2(0.55, 0.55), 0.0, Vector2(x + 22.0, 26.0)),
 			cor, Vector2.RIGHT, true, 0.0)
 		draw_string(fonte, Vector2(x + 42.0, 30.0), jogador["nome"], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color.WHITE)
+		if str(jogador.get("bot", "")) != "":
+			draw_string(fonte, Vector2(x + 42.0, 43.0), "bot", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(1, 1, 1, 0.55))
 		for p in meta:
 			var centro := Vector2(x + 112.0 + p * 16.0, 24.0)
 			draw_circle(centro, 6.5, Color(0, 0, 0, 0.6))

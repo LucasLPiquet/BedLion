@@ -17,6 +17,8 @@ extends CharacterBody2D
 ## Água: quem entra num lago ou rio do mapa (mapas.gd) afunda e morre, inclusive
 ## se for arrastado para dentro pela língua de outro.
 ## Poderes (linguas.gd): gancho, grude, muda e olho. Ficam na variável "lingua".
+## Bots (bot.gd): o cérebro do bot devolve a cada frame os mesmos botões que um
+## jogador apertaria, e este script trata igual a um controle.
 
 signal morreu(camaleao)
 
@@ -31,6 +33,7 @@ const Desenho := preload("res://scripts/desenho_camaleao.gd")
 const Grude := preload("res://scripts/grude.gd")
 const Casca := preload("res://scripts/casca.gd")
 const EfeitoTexto := preload("res://scripts/efeito_texto.gd")
+const Bot := preload("res://scripts/bot.gd")
 
 const VELOCIDADE := 300.0
 const RAIO := 18.0
@@ -73,7 +76,9 @@ const FREIO_EMBALO := 1900.0
 const IMUNE_GRUDE := 0.6
 
 var controle := "teclado1" # prefixo das ações em controles.gd
-var bot := "" # "" = jogador de verdade; "parado" ou "andando" = bot de teste
+## "" = jogador de verdade; "facil", "medio" ou "dificil" = bot (bot.gd);
+## "parado" = bot de teste que não faz nada.
+var bot := ""
 var cor := Color.WHITE
 var mundo: Node # onde efeitos e upgrades largados são criados
 var mapa: Dictionary = {} # mapa da rodada (de mapas.gd), para saber onde tem água
@@ -115,12 +120,7 @@ var _desenho_lingua: Node2D # desenha a língua por cima de todos os camaleões
 var _velocidade_puxada := 0.0
 var _tempo_puxado := 0.0
 
-# Decisão atual do bot (ele repensa algumas vezes por segundo).
-var _bot_tempo := 0.0
-var _bot_mover := Vector2.ZERO
-var _bot_mirar := Vector2.ZERO
-var _bot_golpear := false
-var _bot_lingua := false
+var _cerebro: Bot = null # quem decide os botões do bot (null = jogador ou bot parado)
 
 
 func _ready() -> void:
@@ -137,6 +137,8 @@ func _ready() -> void:
 	_desenho_lingua.z_index = 1
 	_desenho_lingua.draw.connect(_desenhar_lingua)
 	add_child(_desenho_lingua)
+	if bot != "" and bot != "parado":
+		_cerebro = Bot.new(self, bot)
 
 
 func _physics_process(delta: float) -> void:
@@ -157,17 +159,17 @@ func _physics_process(delta: float) -> void:
 	var apertou_invisivel := false
 	var segurando_invisivel := false
 	if bot != "":
-		_pensar_bot(delta)
-		entrada = _bot_mover
-		quer_golpear = _bot_golpear
-		quer_lingua = _bot_lingua
-		_bot_golpear = false
-		_bot_lingua = false
-		# O bot não anda para dentro da água: para e pensa de novo.
+		if _cerebro:
+			var acoes: Dictionary = _cerebro.agir(delta)
+			entrada = acoes["mover"]
+			quer_golpear = acoes["golpe"]
+			quer_lingua = acoes["lingua"]
+			apertou_invisivel = acoes["apertou_invisivel"]
+			segurando_invisivel = acoes["segurando_invisivel"]
+		# O bot não anda para dentro da água (mas pode virar para ela).
 		if entrada != Vector2.ZERO and Mapas.afunda(mapa, position + entrada.normalized() * 40.0):
+			direcao = entrada.normalized()
 			entrada = Vector2.ZERO
-			_bot_mover = Vector2.ZERO
-			_bot_tempo = 0.0
 	else:
 		entrada = Input.get_vector(
 			controle + "_esquerda", controle + "_direita", controle + "_cima", controle + "_baixo"
@@ -209,8 +211,6 @@ func _physics_process(delta: float) -> void:
 	else:
 		if entrada != Vector2.ZERO:
 			direcao = entrada.normalized()
-		if _bot_mirar != Vector2.ZERO:
-			direcao = _bot_mirar
 	if absf(direcao.x) > 0.1:
 		_olhando_direita = direcao.x > 0.0
 	velocity = entrada * VELOCIDADE + _embalo
@@ -715,88 +715,11 @@ func _morrer(caiu_na_agua: bool) -> void:
 	queue_free()
 
 
-# --- Bot de teste -----------------------------------------------------------
-# Bem simples: anda até o inimigo visível mais perto, joga a língua quando ele
-# está no alcance e golpeia quando está perto. Se for pego, tenta se soltar.
-
-func _pensar_bot(delta: float) -> void:
-	_bot_tempo -= delta
-	if _bot_tempo > 0.0:
-		return
-	_bot_tempo = randf_range(0.2, 0.4)
-	_bot_mirar = Vector2.ZERO
-	if bot == "parado":
-		_bot_mover = Vector2.ZERO
-		return
-	if _sendo_puxado():
-		_bot_golpear = randf() < 0.5
-		return
-
-	var travado := _bot_mover != Vector2.ZERO and get_real_velocity().length() < VELOCIDADE * 0.3
-	var alvo := _mais_perto(_inimigos_visiveis())
-	if alvo:
-		var para_alvo := alvo.position - position
-		var distancia := para_alvo.length()
-		_bot_mirar = para_alvo.normalized().rotated(randf_range(-0.15, 0.15))
-		if distancia < ALCANCE_GOLPE * 0.9:
-			_bot_mover = Vector2.ZERO
-			_bot_golpear = true
-		else:
-			_bot_mover = para_alvo.normalized()
-			var alcance: float = Linguas.TIPOS[lingua]["alcance"]
-			_bot_lingua = _estado_lingua == "" and distancia < alcance and randf() < 0.4
-	elif lingua == Linguas.BASICA and _estado_lingua == "" and _item_ao_alcance():
-		# Sem inimigo à vista: puxa um upgrade com a língua.
-		var item: Node2D = _item_ao_alcance()
-		_bot_mover = Vector2.ZERO
-		_bot_mirar = position.direction_to(item.position)
-		_bot_lingua = randf() < 0.5
-	else:
-		_bot_mover = _direcao_sem_agua()
-	if travado:
-		_bot_mover = _direcao_sem_agua()
-
-
-## Uma direção sorteada que não leva direto para a água (tenta algumas vezes).
-func _direcao_sem_agua() -> Vector2:
-	var escolhida := Vector2.from_angle(randf() * TAU)
-	for _tentativa in 8:
-		if not Mapas.afunda(mapa, position + escolhida * 60.0):
-			break
-		escolhida = Vector2.from_angle(randf() * TAU)
-	return escolhida
-
-
-## Upgrade no chão mais perto, dentro do alcance da língua e sem parede no meio.
-func _item_ao_alcance() -> Node2D:
-	var alcance: float = Linguas.TIPOS[lingua]["alcance"]
-	var lista: Array = []
-	for item in get_tree().get_nodes_in_group("upgrades_no_chao"):
-		if not item.na_lingua and position.distance_to(item.position) < alcance \
-				and not _bate_em_parede(position, item.position):
-			lista.append(item)
-	return _mais_perto(lista)
-
-
-func _inimigos_visiveis() -> Array:
-	var lista: Array = []
-	for outro in get_tree().get_nodes_in_group("camaleoes"):
-		if outro != self and outro.vivo and (not outro.invisivel or _enxerga(outro)):
-			lista.append(outro)
-	return lista
-
+# --- Olho -------------------------------------------------------------------
 
 ## Com o poder "olho", enxerga quem está invisível dentro do raio.
 func _enxerga(outro: Node) -> bool:
 	return lingua == "olho" and position.distance_to(outro.position) <= Linguas.TIPOS["olho"]["raio_olho"]
-
-
-func _mais_perto(nos: Array) -> Node2D:
-	var melhor: Node2D = null
-	for no in nos:
-		if melhor == null or position.distance_to(no.position) < position.distance_to(melhor.position):
-			melhor = no
-	return melhor
 
 
 func _draw() -> void:
