@@ -295,12 +295,21 @@ func _boca() -> Vector2:
 	return position + Desenho.boca(_olhando_direita)
 
 
+## Origem física do disparo: mantida dentro do raio de colisão (RAIO = 18.0).
+## Disparos verticais alinham com o eixo central do camaleão para não colidir
+## prematuramente com paredes ao lado nem sair tortos.
+func _origem_lingua() -> Vector2:
+	if absf(direcao.x) < 0.15:
+		return position + Vector2(0.0, direcao.y * (RAIO - 4.0))
+	return position + direcao * (RAIO - 4.0)
+
+
 func _lancar_lingua() -> void:
 	if invisivel or _estado_lingua != "" or _recarga_lingua > 0.0:
 		return
 	_dados_lingua = Linguas.TIPOS[lingua]
 	_estado_lingua = "indo"
-	_ponta = _boca()
+	_ponta = _origem_lingua()
 	_percorrido = 0.0
 	_carga_invisivel = 0.0
 	modulate.a = 1.0
@@ -311,8 +320,8 @@ func _mover_lingua(delta: float) -> void:
 		"indo":
 			var passo: float = _dados_lingua["velocidade"] * delta
 			var nova := _ponta + direcao * passo
-			# Confere a parede a partir do corpo (e não da boca): colado numa
-			# parede, a boca já fica dentro dela e a língua passaria direto.
+			# Confere a parede a partir do corpo: colado numa parede, a língua
+			# segue a direção física correta sem bater na parede de apoio.
 			var batida := _parede_entre(position, nova)
 			if not batida.is_empty():
 				nova = batida["position"] # a ponta para na parede
@@ -345,11 +354,11 @@ func _mover_lingua(delta: float) -> void:
 					_soltar_grude(_ponta)
 		"voltando":
 			var passo: float = _dados_lingua["velocidade"] * delta
-			var boca := _boca()
-			if _ponta.distance_to(boca) <= passo:
+			var destino := _origem_lingua()
+			if _ponta.distance_to(destino) <= passo:
 				soltar_lingua(RECARGA_LINGUA)
 			else:
-				_ponta = _ponta.move_toward(boca, passo)
+				_ponta = _ponta.move_toward(destino, passo)
 		"puxando":
 			if not (is_instance_valid(_preso) and _preso.vivo):
 				soltar_lingua(RECARGA_LINGUA)
@@ -370,11 +379,11 @@ func _mover_lingua(delta: float) -> void:
 				soltar_lingua(RECARGA_LINGUA)
 				return
 			var passo: float = _dados_lingua["velocidade"] * VELOCIDADE_TRAZER_ITEM * delta
-			var boca := _boca()
-			if _ponta.distance_to(boca) <= passo:
+			var destino := _origem_lingua()
+			if _ponta.distance_to(destino) <= passo:
 				_receber_item()
 				return
-			_ponta = _ponta.move_toward(boca, passo)
+			_ponta = _ponta.move_toward(destino, passo)
 			_item.position = _ponta
 			if LINGUA_PODE_SER_CORTADA and _alguem_cortou(_ponta):
 				soltar_lingua(RECARGA_SOLTAR) # o upgrade cai onde a língua foi cortada
@@ -496,11 +505,11 @@ func _comecar_puxada(alvo: Node) -> void:
 
 ## Um terceiro camaleão encostando na língua esticada (da boca até "ponta") corta ela.
 func _alguem_cortou(ponta: Vector2) -> bool:
-	var boca := _boca()
+	var origem := _origem_lingua()
 	for outro in get_tree().get_nodes_in_group("camaleoes"):
 		if outro == self or outro == _preso or not outro.vivo:
 			continue
-		var perto := Geometry2D.get_closest_point_to_segment(outro.position, boca, ponta)
+		var perto := Geometry2D.get_closest_point_to_segment(outro.position, origem, ponta)
 		if perto.distance_to(outro.position) <= RAIO:
 			return true
 	return false
@@ -568,7 +577,12 @@ func _desenhar_lingua() -> void:
 	if _estado_lingua == "":
 		return
 	var cor_ponta: Color = Linguas.ROSA if lingua == Linguas.BASICA else Linguas.TIPOS[lingua]["cor"]
-	Linguas.desenhar(_desenho_lingua, Desenho.boca(_olhando_direita), to_local(_ponta), cor_ponta)
+	var origem_visual: Vector2
+	if absf(direcao.x) < 0.15:
+		origem_visual = to_local(_origem_lingua())
+	else:
+		origem_visual = Desenho.boca(_olhando_direita)
+	Linguas.desenhar(_desenho_lingua, origem_visual, to_local(_ponta), cor_ponta)
 
 
 # --- Golpe ------------------------------------------------------------------
