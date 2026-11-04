@@ -573,8 +573,11 @@ func _desenhar_lingua() -> void:
 
 # --- Golpe ------------------------------------------------------------------
 
+static var _golpes_pendentes: Array = []
+
+
 func _golpear() -> void:
-	if _recarga_golpe > 0.0:
+	if not vivo or _recarga_golpe > 0.0:
 		return
 	_recarga_golpe = RECARGA_GOLPE
 	# Bater tira da invisibilidade e interrompe qualquer carga em andamento.
@@ -584,34 +587,66 @@ func _golpear() -> void:
 		_carga_invisivel = 0.0
 		modulate.a = 1.0
 		_recarga_invisibilidade = RECARGA_INVISIBILIDADE
-	var acertou := false
-	for outro in get_tree().get_nodes_in_group("camaleoes"):
-		if outro == self or not outro.vivo:
+	if not _golpes_pendentes.has(self):
+		_golpes_pendentes.append(self)
+	_executar_golpes_pendentes.call_deferred()
+
+
+func _executar_golpes_pendentes() -> void:
+	resolver_golpes_pendentes()
+
+
+func _alcanca_golpe(alvo_pos: Vector2) -> bool:
+	var para_alvo := alvo_pos - position
+	var distancia := para_alvo.length()
+	var na_frente := absf(direcao.angle_to(para_alvo)) <= ANGULO_GOLPE
+	if distancia > ALCANCE_GOLPE or (distancia > DISTANCIA_COLADO and not na_frente):
+		return false
+	return not _bate_em_parede(position, alvo_pos)
+
+
+static func resolver_golpes_pendentes() -> void:
+	if _golpes_pendentes.is_empty():
+		return
+	var atacantes := _golpes_pendentes.duplicate()
+	_golpes_pendentes.clear()
+	var mortos: Array = []
+	var cascas_estouradas: Array = []
+	for item in atacantes:
+		if not is_instance_valid(item):
 			continue
-		var para_outro: Vector2 = outro.position - position
-		var distancia := para_outro.length()
-		var na_frente := absf(direcao.angle_to(para_outro)) <= ANGULO_GOLPE
-		if distancia > ALCANCE_GOLPE or (distancia > DISTANCIA_COLADO and not na_frente):
+		var atacante: CharacterBody2D = item
+		if not atacante.vivo or not atacante.is_inside_tree():
 			continue
-		if not _bate_em_parede(position, outro.position): # não bate através de parede
-			outro.morrer()
-			acertou = true
-	for casca in get_tree().get_nodes_in_group("cascas"):
-		var para_casca: Vector2 = casca.position - position
-		var longe := para_casca.length()
-		var de_frente := absf(direcao.angle_to(para_casca)) <= ANGULO_GOLPE
-		if longe > ALCANCE_GOLPE or (longe > DISTANCIA_COLADO and not de_frente):
-			continue
-		if not _bate_em_parede(position, casca.position):
+		var acertou := false
+		for outro in atacante.get_tree().get_nodes_in_group("camaleoes"):
+			if outro == atacante or not outro.vivo:
+				continue
+			if atacante._alcanca_golpe(outro.position):
+				if not mortos.has(outro):
+					mortos.append(outro)
+				acertou = true
+		for casca in atacante.get_tree().get_nodes_in_group("cascas"):
+			if casca.is_queued_for_deletion():
+				continue
+			if atacante._alcanca_golpe(casca.position):
+				if not cascas_estouradas.has(casca):
+					cascas_estouradas.append(casca)
+				acertou = true
+		var efeito := EfeitoGolpe.new()
+		efeito.position = atacante.position
+		efeito.direcao = atacante.direcao
+		efeito.alcance = ALCANCE_GOLPE
+		efeito.abertura = ANGULO_GOLPE
+		efeito.acertou = acertou
+		if is_instance_valid(atacante.mundo):
+			atacante.mundo.add_child(efeito)
+	for casca in cascas_estouradas:
+		if is_instance_valid(casca):
 			casca.estourar()
-			acertou = true
-	var efeito := EfeitoGolpe.new()
-	efeito.position = position
-	efeito.direcao = direcao
-	efeito.alcance = ALCANCE_GOLPE
-	efeito.abertura = ANGULO_GOLPE
-	efeito.acertou = acertou
-	mundo.add_child(efeito)
+	for morto in mortos:
+		if is_instance_valid(morto) and morto.vivo:
+			morto.morrer()
 
 
 # --- Pés sujos (cocô de pombo) ----------------------------------------------

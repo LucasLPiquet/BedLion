@@ -71,6 +71,7 @@ var _rodada: Node2D
 var _numero_rodada := 0
 var _vivos: Array = []
 var _rodada_acabou := false
+var _verificando_fim_rodada := false
 var _placar: Placar
 var _rotulo_mensagem: Label
 var _rotulo_mapa: Label
@@ -274,6 +275,7 @@ func _nova_rodada() -> void:
 	_rodada.add_child(pistas)
 	_numero_rodada += 1
 	_rodada_acabou = false
+	_verificando_fim_rodada = false
 	_vivos.clear()
 	_atualizar_placar()
 	_mostrar_mensagem("Rodada %d" % _numero_rodada, 1.2)
@@ -355,8 +357,19 @@ func _criar_upgrade(posicao: Vector2) -> void:
 
 func _ao_morrer(camaleao: Node) -> void:
 	_vivos.erase(camaleao)
-	if _rodada_acabou or _vivos.size() > 1:
+	if _rodada_acabou or _verificando_fim_rodada or _vivos.size() > 1:
 		return
+	# Só decide no fim do quadro de física: quem morrer no mesmo quadro (golpes
+	# trocados ou dois caindo na água juntos) também conta, e aí dá empate.
+	# Sem isso, a ordem dos nós na árvore escolheria o vencedor.
+	_verificando_fim_rodada = true
+	_encerrar_rodada.call_deferred(_numero_rodada)
+
+
+func _encerrar_rodada(rodada: int) -> void:
+	if not is_inside_tree() or rodada != _numero_rodada or _rodada_acabou:
+		return
+	_verificando_fim_rodada = false
 	_rodada_acabou = true
 	var rodada_que_acabou := _numero_rodada
 	var partida_acabou := false
