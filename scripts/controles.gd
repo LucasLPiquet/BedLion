@@ -45,6 +45,29 @@ const EIXOS_PAD := {
 	"lingua": [JOY_AXIS_TRIGGER_RIGHT, 1.0],
 	"invisivel": [JOY_AXIS_TRIGGER_LEFT, 1.0],
 }
+## Teclas e botões extras nas ações nativas de interface (menus e configurações).
+const INTERFACE_TECLAS := {
+	"ui_up": [KEY_W],
+	"ui_down": [KEY_S],
+	"ui_left": [KEY_A],
+	"ui_right": [KEY_D],
+	"ui_accept": [KEY_F],
+	"ui_cancel": [KEY_G],
+}
+const INTERFACE_BOTOES_PAD := {
+	"ui_up": [JOY_BUTTON_DPAD_UP],
+	"ui_down": [JOY_BUTTON_DPAD_DOWN],
+	"ui_left": [JOY_BUTTON_DPAD_LEFT],
+	"ui_right": [JOY_BUTTON_DPAD_RIGHT],
+	"ui_accept": [JOY_BUTTON_A],
+	"ui_cancel": [JOY_BUTTON_B],
+}
+const INTERFACE_EIXOS_PAD := {
+	"ui_up": [JOY_AXIS_LEFT_Y, -1.0],
+	"ui_down": [JOY_AXIS_LEFT_Y, 1.0],
+	"ui_left": [JOY_AXIS_LEFT_X, -1.0],
+	"ui_right": [JOY_AXIS_LEFT_X, 1.0],
+}
 ## Quantos controles de videogame são registrados (pad0 até pad7).
 const MAX_PADS := 8
 ## Quanto o analógico precisa ser empurrado para contar (evita andar sozinho).
@@ -78,6 +101,35 @@ func _ready() -> void:
 			movimento.axis = eixo[0]
 			movimento.axis_value = eixo[1]
 			InputMap.action_add_event(nome, movimento)
+
+	_registrar_interface()
+
+
+func _registrar_interface() -> void:
+	for acao in INTERFACE_TECLAS:
+		_criar_acao(acao)
+		for tecla in INTERFACE_TECLAS[acao]:
+			var evento := InputEventKey.new()
+			evento.keycode = tecla
+			if not InputMap.action_has_event(acao, evento):
+				InputMap.action_add_event(acao, evento)
+	for acao in INTERFACE_BOTOES_PAD:
+		_criar_acao(acao)
+		for botao in INTERFACE_BOTOES_PAD[acao]:
+			var evento := InputEventJoypadButton.new()
+			evento.device = -1
+			evento.button_index = botao
+			if not InputMap.action_has_event(acao, evento):
+				InputMap.action_add_event(acao, evento)
+	for acao in INTERFACE_EIXOS_PAD:
+		_criar_acao(acao)
+		var eixo: Array = INTERFACE_EIXOS_PAD[acao]
+		var movimento := InputEventJoypadMotion.new()
+		movimento.device = -1
+		movimento.axis = eixo[0]
+		movimento.axis_value = eixo[1]
+		if not InputMap.action_has_event(acao, movimento):
+			InputMap.action_add_event(acao, movimento)
 
 
 func _criar_acao(nome: String) -> String:
