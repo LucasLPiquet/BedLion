@@ -1,3 +1,4 @@
+class_name Pegada
 extends Node2D
 ## Uma pegada de camaleão com o pé sujo de cocô de pombo (ou molhado de poça). Some sozinha depois
 ## de DURACAO segundos. Desenhada apontando para a direita (+x); quem cria

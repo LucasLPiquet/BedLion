@@ -1,3 +1,4 @@
+class_name CocoPombo
 extends Node2D
 ## Cocô de pombo que cai do céu. Primeiro aparece só uma sombra no chão (o aviso),
 ## que vai escurecendo durante TEMPO_AVISO segundos; aí o cocô cai e faz "splat".

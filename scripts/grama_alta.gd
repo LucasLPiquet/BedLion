@@ -1,3 +1,4 @@
+class_name GramaAlta
 extends Node2D
 ## Capim alto ("grama" em mapas.gd). As folhas da frente de um camaleão são
 ## desenhadas por cima dele e as de trás por baixo, então quem está dentro fica

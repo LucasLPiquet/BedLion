@@ -1,3 +1,4 @@
+class_name Pistas
 extends Node
 ## Pistas que os camaleões deixam no mapa, inclusive invisíveis:
 ## - Poça: andando nela faz ondinhas; parado faz uma ondinha de vez em quando;

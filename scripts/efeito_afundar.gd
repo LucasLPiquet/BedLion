@@ -1,3 +1,4 @@
+class_name EfeitoAfundar
 extends Node2D
 ## Camaleão que caiu na água: ele vai encolhendo e descendo enquanto some,
 ## com um "splash" de gotinhas e ondas em volta. Se ele estava invisível,

@@ -1,3 +1,4 @@
+class_name Main
 extends Node2D
 ## Monta a arena e controla rodadas, placar e partida. Quem joga vem do lobby
 ## (Partida.jogadores, ver lobby.gd); se a arena for aberta direto (F6 no editor),

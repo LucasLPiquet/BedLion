@@ -1,3 +1,4 @@
+class_name EfeitoMorte
 extends Node2D
 ## "Puf" de fumaça na cor do camaleão quando ele morre.
 

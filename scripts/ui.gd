@@ -1,8 +1,10 @@
+class_name Ui
 extends RefCounted
 ## Peças das telas fora da arena (menu, lobby e configurações): fundo com o
 ## mapa Jardim escurecido, rótulos com contorno e botões no mesmo estilo.
 ## Tudo montado por código, como a arena.
 
+const TEMA := preload("res://recursos/ui_tema.tres")
 const Cenario := preload("res://scripts/cenario.gd")
 const Mapas := preload("res://scripts/mapas.gd")
 
@@ -43,25 +45,24 @@ static func rotulo(texto: String, tamanho_fonte: int, posicao: Vector2, largura 
 
 static func botao(texto: String, tamanho: Vector2, tamanho_fonte := 34) -> Button:
 	var novo := Button.new()
+	novo.theme = TEMA
 	novo.text = texto
 	novo.custom_minimum_size = tamanho
 	novo.size = tamanho
-	novo.add_theme_font_size_override("font_size", tamanho_fonte)
-	novo.add_theme_constant_override("outline_size", 6)
-	novo.add_theme_color_override("font_outline_color", CONTORNO)
-	novo.add_theme_stylebox_override("normal", _estilo(COR_BOTAO, Color(0, 0, 0, 0.6)))
-	novo.add_theme_stylebox_override("hover", _estilo(COR_BOTAO_FOCO, Color(0, 0, 0, 0.6)))
-	novo.add_theme_stylebox_override("pressed", _estilo(COR_BOTAO_FOCO.darkened(0.2), Color(0, 0, 0, 0.6)))
-	novo.add_theme_stylebox_override("focus", _estilo(COR_BOTAO_FOCO, AMARELO))
-	novo.add_theme_stylebox_override("disabled", _estilo(Color(0.2, 0.2, 0.2, 0.6), Color(0, 0, 0, 0.4)))
+	if tamanho_fonte != 34:
+		novo.add_theme_font_size_override("font_size", tamanho_fonte)
 	return novo
 
 
 static func painel(retangulo: Rect2, cor_borda := Color(0, 0, 0, 0.6)) -> Panel:
 	var novo := Panel.new()
+	novo.theme = TEMA
 	novo.position = retangulo.position
 	novo.size = retangulo.size
-	novo.add_theme_stylebox_override("panel", _estilo(COR_PAINEL, cor_borda))
+	if cor_borda != Color(0, 0, 0, 0.6):
+		var estilo := TEMA.get_stylebox("panel", "Panel").duplicate() as StyleBoxFlat
+		estilo.border_color = cor_borda
+		novo.add_theme_stylebox_override("panel", estilo)
 	novo.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return novo
 

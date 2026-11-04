@@ -1,3 +1,4 @@
+class_name Linguas
 extends RefCounted
 ## Línguas e poderes. Todo camaleão começa com a "basica"; os outros são poderes
 ## que aparecem no mapa numa bolha (lingua_no_chao.gd). Só dá para ter um por vez,

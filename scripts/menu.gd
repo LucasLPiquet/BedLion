@@ -1,3 +1,4 @@
+class_name Menu
 extends Control
 ## Menu inicial: Jogar (vai para o lobby), Configurações e Sair.
 ## Funciona com mouse, teclado (setas + Enter) e controle (direcional + A).

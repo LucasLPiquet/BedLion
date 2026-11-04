@@ -1,3 +1,4 @@
+class_name Lobby
 extends Control
 ## Lobby (antes da partida), em duas etapas:
 ## 1. Entrar: cada jogador aperta o golpe no próprio teclado ou controle para

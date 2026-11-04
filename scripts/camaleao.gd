@@ -1,3 +1,4 @@
+class_name Camaleao
 extends CharacterBody2D
 ## Um camaleão controlado por um jogador (teclado ou controle) ou por um bot.
 ## Dois ataques:
