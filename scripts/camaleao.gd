@@ -228,11 +228,11 @@ func _physics_process(delta: float) -> void:
 	_tempo_olho += delta
 	_deixar_pegadas(delta)
 
-	_controlar_invisibilidade(delta, apertou_invisivel, segurando_invisivel)
 	if quer_golpear:
 		_golpear()
 	if quer_lingua:
 		_lancar_lingua()
+	_controlar_invisibilidade(delta, apertou_invisivel, segurando_invisivel)
 	_mover_lingua(delta)
 	queue_redraw()
 	_desenho_lingua.queue_redraw()
@@ -282,6 +282,7 @@ func _trocar_de_pele() -> void:
 
 
 func _aparecer() -> void:
+	_carga_invisivel = 0.0
 	invisivel = false
 	visible = true
 	modulate.a = 1.0
@@ -302,6 +303,7 @@ func _lancar_lingua() -> void:
 	_ponta = _boca()
 	_percorrido = 0.0
 	_carga_invisivel = 0.0
+	modulate.a = 1.0
 
 
 func _mover_lingua(delta: float) -> void:
@@ -575,9 +577,13 @@ func _golpear() -> void:
 	if _recarga_golpe > 0.0:
 		return
 	_recarga_golpe = RECARGA_GOLPE
-	# Bater tira da invisibilidade: ele aparece para dar o golpe.
+	# Bater tira da invisibilidade e interrompe qualquer carga em andamento.
 	if invisivel:
 		_aparecer()
+	else:
+		_carga_invisivel = 0.0
+		modulate.a = 1.0
+		_recarga_invisibilidade = RECARGA_INVISIBILIDADE
 	var acertou := false
 	for outro in get_tree().get_nodes_in_group("camaleoes"):
 		if outro == self or not outro.vivo:
