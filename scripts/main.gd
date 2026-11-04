@@ -263,6 +263,7 @@ func _nova_partida() -> void:
 
 func _nova_rodada() -> void:
 	if _rodada:
+		remove_child(_rodada)
 		_rodada.queue_free()
 	_rodada = Node2D.new()
 	_rodada.y_sort_enabled = true # quem está mais embaixo aparece na frente
@@ -372,9 +373,9 @@ func _ao_morrer(camaleao: Node) -> void:
 		_mostrar_mensagem("Empate!", PAUSA_FIM_RODADA)
 	_atualizar_placar()
 
-	await get_tree().create_timer(PAUSA_FIM_PARTIDA if partida_acabou else PAUSA_FIM_RODADA).timeout
-	# Se no meio da espera a partida recomeçou (F1 ou controle novo), não faz nada.
-	if rodada_que_acabou != _numero_rodada or not _rodada_acabou:
+	await _criar_temporizador(PAUSA_FIM_PARTIDA if partida_acabou else PAUSA_FIM_RODADA).timeout
+	# Se no meio da espera a partida recomeçou (F1 ou controle novo) ou saiu da cena, não faz nada.
+	if not is_inside_tree() or rodada_que_acabou != _numero_rodada or not _rodada_acabou:
 		return
 	if partida_acabou:
 		_nova_partida()
@@ -388,12 +389,24 @@ func _mostrar_mensagem(texto: String, duracao: float) -> void:
 
 ## Mostra o texto no rótulo e apaga depois de "duracao" segundos (se ninguém trocou antes).
 func _mostrar_texto(rotulo: Label, texto: String, duracao: float) -> void:
+	if not is_instance_valid(rotulo):
+		return
 	rotulo.text = texto
-	var tempo := get_tree().create_timer(duracao)
+	var tempo := _criar_temporizador(duracao)
 	tempo.timeout.connect(func() -> void:
-		if rotulo.text == texto:
+		if is_instance_valid(rotulo) and rotulo.text == texto:
 			rotulo.text = ""
 	)
+
+
+func _criar_temporizador(duracao: float) -> Timer:
+	var relogio := Timer.new()
+	relogio.wait_time = duracao
+	relogio.one_shot = true
+	relogio.autostart = true
+	add_child(relogio)
+	relogio.timeout.connect(relogio.queue_free)
+	return relogio
 
 
 func _atualizar_placar() -> void:
