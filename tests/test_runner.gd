@@ -2,7 +2,7 @@ extends SceneTree
 ## Test Runner simples e direto para execução headless no Godot 4.
 ## Execute com: godot --headless --path . -s tests/test_runner.gd
 
-func _init() -> void:
+func _initialize() -> void:
 	print("\n==================================================")
 	print("  BedLion - Bateria de Testes Automatizados")
 	print("==================================================\n")
