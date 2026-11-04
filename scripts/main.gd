@@ -72,6 +72,7 @@ var _numero_rodada := 0
 var _vivos: Array = []
 var _rodada_acabou := false
 var _verificando_fim_rodada := false
+var _partida_acabou := false
 var _placar: Placar
 var _rotulo_mensagem: Label
 var _rotulo_mapa: Label
@@ -96,9 +97,10 @@ func _unhandled_input(evento: InputEvent) -> void:
 	elif tecla.keycode == KEY_F1 and not _veio_do_lobby:
 		_modo_bot = (_modo_bot + 1) % MODOS_BOT.size()
 		_nova_partida()
-	elif tecla.keycode == KEY_F2:
-		# Pula para o próximo mapa (começa uma rodada nova, sem ponto para ninguém).
-		_nova_rodada()
+	elif tecla.keycode == KEY_F2 and not _veio_do_lobby:
+		# Pula para o próximo mapa apenas em teste direto e enquanto a partida não terminou.
+		if not _partida_acabou:
+			_nova_rodada()
 
 
 func _ao_mudar_controles(_aparelho: int, _conectado: bool) -> void:
@@ -248,7 +250,7 @@ func _escrever_ajuda() -> void:
 		partes.append("%s: %s" % [jogador["nome"], como])
 	if not _veio_do_lobby:
 		partes.append("F1: %s" % NOMES_MODO_BOT[_modo_bot])
-	partes.append("F2: próximo mapa")
+		partes.append("F2: próximo mapa")
 	partes.append("Esc: menu")
 	_rotulo_ajuda.text = "(golpe / invisível / língua)    " + "    |    ".join(partes)
 
@@ -259,6 +261,7 @@ func _nova_partida() -> void:
 	for jogador in _jogadores:
 		placar.append(0)
 	_numero_rodada = 0
+	_partida_acabou = false
 	_nova_rodada()
 
 
@@ -379,6 +382,7 @@ func _encerrar_rodada(rodada: int) -> void:
 		var nome: String = _jogadores[vencedor]["nome"]
 		if placar[vencedor] >= PONTOS_PARA_VENCER:
 			partida_acabou = true
+			_partida_acabou = true
 			_mostrar_mensagem("%s venceu a partida!" % nome, PAUSA_FIM_PARTIDA)
 		else:
 			_mostrar_mensagem("%s ganhou a rodada!" % nome, PAUSA_FIM_RODADA)
