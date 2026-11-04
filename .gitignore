@@ -4,3 +4,4 @@
 *.translation
 export.cfg
 export_credentials.cfg
+bin/
