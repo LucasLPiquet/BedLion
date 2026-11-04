@@ -236,6 +236,10 @@ func _continuar_com_mouse() -> void:
 # --- Etapa 2: bots e dificuldade ---------------------------------------------
 
 func _ir_para_bots() -> void:
+	if _humanos() >= MAX_JOGADORES:
+		_quantidade_bots = 0
+		_comecar()
+		return
 	_etapa = "bots"
 	_espera = ESPERA_ETAPA
 	_linha = 0
@@ -255,11 +259,8 @@ func _voltar_para_entrar() -> void:
 func _entrada_etapa_bots(controle: String) -> void:
 	if _vaga_de(controle) < 0:
 		return
-	if _apertou(controle, "cima"):
-		_linha = posmod(_linha - 1, 2)
-		_atualizar()
-	elif _apertou(controle, "baixo"):
-		_linha = posmod(_linha + 1, 2)
+	if (_apertou(controle, "cima") or _apertou(controle, "baixo")) and _quantidade_bots > 0:
+		_linha = posmod(_linha + (-1 if _apertou(controle, "cima") else 1), 2)
 		_atualizar()
 	elif _apertou(controle, "esquerda") or _apertou(controle, "direita"):
 		var passo := -1 if _apertou(controle, "esquerda") else 1
@@ -292,6 +293,8 @@ func _mudar_dificuldade(passo: int) -> void:
 
 
 func _escolher_dificuldade(dificuldade: String) -> void:
+	if _quantidade_bots <= 0:
+		return
 	_dificuldade = dificuldade
 	_linha = 1
 	_atualizar()
@@ -322,7 +325,8 @@ func _comecar() -> void:
 	if jogadores.size() < 2:
 		return
 	Partida.jogadores = jogadores
-	Partida.quantidade_bots = _quantidade_bots
+	if _humanos() < MAX_JOGADORES:
+		Partida.quantidade_bots = _quantidade_bots
 	Partida.dificuldade_bots = _dificuldade
 	Partida.ir_para(Partida.CENA_ARENA)
 
@@ -382,13 +386,19 @@ func _atualizar() -> void:
 	if nos_bots:
 		var limites := _limites_bots()
 		_quantidade_bots = clampi(_quantidade_bots, limites.x, limites.y)
+		var sem_bots := _quantidade_bots == 0
+		if sem_bots:
+			_linha = 0
 		_titulo.text = "Bots"
 		_rotulo_bots.text = str(_quantidade_bots)
 		_rotulo_linha_bots.add_theme_color_override("font_color", Ui.AMARELO if _linha == 0 else Color.WHITE)
-		_rotulo_linha_dificuldade.add_theme_color_override("font_color", Ui.AMARELO if _linha == 1 else Color.WHITE)
+		var cor_dificuldade := Color(1, 1, 1, 0.35) if sem_bots else (Ui.AMARELO if _linha == 1 else Color.WHITE)
+		_rotulo_linha_dificuldade.add_theme_color_override("font_color", cor_dificuldade)
 		for i in _botoes_dificuldade.size():
 			var botao: Button = _botoes_dificuldade[i]
-			botao.set_pressed_no_signal(Partida.DIFICULDADES[i] == _dificuldade)
+			botao.disabled = sem_bots
+			botao.modulate.a = 0.5 if sem_bots else 1.0
+			botao.set_pressed_no_signal(not sem_bots and Partida.DIFICULDADES[i] == _dificuldade)
 		_ajuda.text = "cima/baixo: escolhe a linha    lados: muda    golpe: começar    invisível: voltar    Esc: menu"
 	else:
 		_titulo.text = "Escolha seu camaleão"
