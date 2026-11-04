@@ -75,8 +75,27 @@ func _ready() -> void:
 	add_child(voltar)
 
 	_montar_painel_bots()
+	Input.joy_connection_changed.connect(_ao_mudar_controle)
 	_espera = ESPERA_ETAPA
 	_atualizar()
+
+
+func _ao_mudar_controle(aparelho: int, conectado: bool) -> void:
+	if conectado:
+		return
+	var vaga := _vaga_de("pad%d" % aparelho)
+	if vaga < 0:
+		return
+	_vagas[vaga] = {}
+	if _etapa == "bots":
+		if _humanos() == 0:
+			_voltar_para_entrar()
+		else:
+			_atualizar()
+	elif _todos_prontos():
+		_ir_para_bots()
+	else:
+		_atualizar()
 
 
 func _process(delta: float) -> void:
