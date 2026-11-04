@@ -43,7 +43,6 @@ var tela_cheia := false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	get_window().content_scale_size = TAMANHO_TELA
 	_carregar_configuracoes()
 	aplicar_configuracoes()
 

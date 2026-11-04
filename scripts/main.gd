@@ -80,8 +80,6 @@ var _rotulo_ajuda: Label
 
 
 func _ready() -> void:
-	# A tela mostra a arena inteira (TAMANHO), seja qual for o tamanho da janela.
-	get_window().content_scale_size = Vector2i(TAMANHO)
 	_veio_do_lobby = not Partida.jogadores.is_empty()
 	_montar_hud()
 	Input.joy_connection_changed.connect(_ao_mudar_controles)
