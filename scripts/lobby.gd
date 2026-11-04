@@ -95,8 +95,18 @@ func _process(delta: float) -> void:
 
 func _unhandled_input(evento: InputEvent) -> void:
 	var tecla := evento as InputEventKey
-	if tecla and tecla.pressed and not tecla.echo and tecla.keycode == KEY_ESCAPE:
-		Partida.ir_para(Partida.CENA_MENU)
+	if tecla and tecla.pressed and not tecla.echo:
+		if tecla.keycode == KEY_ESCAPE:
+			Partida.ir_para(Partida.CENA_MENU)
+		elif tecla.keycode == KEY_G and _espera <= 0.0 and _etapa == "entrar" and _vaga_de("teclado1") < 0:
+			Partida.ir_para(Partida.CENA_MENU)
+		elif (tecla.keycode == KEY_ENTER or tecla.keycode == KEY_KP_ENTER) and _espera <= 0.0:
+			_continuar_com_mouse()
+		return
+	var botao := evento as InputEventJoypadButton
+	if botao and botao.pressed and botao.button_index == JOY_BUTTON_B and _espera <= 0.0:
+		if _vaga_de("pad%d" % botao.device) < 0:
+			Partida.ir_para(Partida.CENA_MENU)
 
 
 ## Teclados e controles conectados (cada um pode entrar numa vaga).

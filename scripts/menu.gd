@@ -37,7 +37,7 @@ func _ready() -> void:
 	coluna.add_child(sair)
 	jogar.grab_focus.call_deferred()
 
-	add_child(Ui.rotulo("Enter / A para escolher", 20, Vector2(0, Ui.TAMANHO.y - 60)))
+	add_child(Ui.rotulo("Enter / F / A para escolher", 20, Vector2(0, Ui.TAMANHO.y - 60)))
 
 
 func _process(delta: float) -> void:
