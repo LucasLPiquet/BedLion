@@ -300,7 +300,7 @@ func _pensar_com_alvo(onde: Vector2, velocidade: Vector2, preso: bool, agressivi
 	else:
 		# Longe o bastante: anda de lado, esperando uma chance.
 		var lado := eu.position.direction_to(onde).orthogonal() * _lado
-		_destino = eu.position + lado * 120.0
+		_destino = _limitar_arena(eu.position + lado * 120.0)
 
 
 ## Invisível: caça no corpo a corpo (não dá para usar a língua).
@@ -602,9 +602,10 @@ func _movimento(delta: float) -> Vector2:
 func _proximo_ponto(delta: float) -> Vector2:
 	if _trajeto_livre(eu.position, _destino):
 		_rota.clear()
+		_tempo_rota = 0.0
 		return _destino
 	_tempo_rota -= delta
-	if _rota.is_empty() or _tempo_rota <= 0.0 or _rota_para.distance_to(_destino) > 40.0:
+	if _tempo_rota <= 0.0 or _rota_para.distance_to(_destino) > 40.0:
 		_rota = Caminhos.caminho(eu.mapa, eu.position, _destino)
 		_rota_para = _destino
 		_tempo_rota = 0.6
@@ -685,12 +686,21 @@ func _deixaria_pista(ponto: Vector2) -> bool:
 	return false
 
 
+## Garante que o ponto fique dentro dos limites internos navegáveis da arena.
+func _limitar_arena(ponto: Vector2) -> Vector2:
+	return Vector2(
+		clampf(ponto.x, 65.0, 1535.0),
+		clampf(ponto.y, 65.0, 835.0)
+	)
+
+
 ## Um ponto do outro lado, longe de "perigo".
 func _ponto_longe_de(perigo: Vector2) -> Vector2:
 	var para_longe := perigo.direction_to(eu.position)
 	if para_longe == Vector2.ZERO:
 		para_longe = Vector2.from_angle(randf() * TAU)
-	return eu.position + para_longe.rotated(randf_range(-0.6, 0.6)) * 250.0
+	var ponto := eu.position + para_longe.rotated(randf_range(-0.6, 0.6)) * 250.0
+	return _limitar_arena(ponto)
 
 
 ## Um lugar sorteado do chão para passear (fora das paredes e da água).
