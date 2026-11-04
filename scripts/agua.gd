@@ -1,3 +1,4 @@
+class_name Agua
 extends Node2D
 ## Brilhinhos que piscam na água, para ela parecer viva. É só enfeite: o
 ## desenho parado da água fica em cenario.gd e quem afunda é conferido em camaleao.gd.

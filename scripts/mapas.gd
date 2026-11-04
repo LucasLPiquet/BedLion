@@ -1,3 +1,4 @@
+class_name Mapas
 extends RefCounted
 const Desenho := preload("res://scripts/desenho_camaleao.gd")
 ## Lista de mapas. A cada rodada o jogo sorteia um deles (nunca o mesmo da

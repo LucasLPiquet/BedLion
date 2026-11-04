@@ -1,3 +1,4 @@
+class_name DesenhoCamaleao
 extends RefCounted
 ## Desenha um camaleão fofo só com formas (sem imagem): corpo redondo, olhos
 ## grandes de pálpebra caída, cauda em espiral e a mão apontando para onde ele mira.

@@ -1,3 +1,4 @@
+class_name Casca
 extends Node2D
 ## Pele velha que fica para trás quando um camaleão com o poder "muda" some.
 ## É igualzinha ao camaleão, parada no lugar. Uma língua ou um golpe estoura a

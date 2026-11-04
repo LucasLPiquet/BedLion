@@ -1,3 +1,4 @@
+class_name EfeitoTexto
 extends Node2D
 ## Texto curto que sobe e some (o nome do poder quando alguém pega).
 

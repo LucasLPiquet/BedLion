@@ -1,3 +1,4 @@
+class_name Caminhos
 extends RefCounted
 ## Caminhos pelo mapa para os bots (bot.gd). O chão vira uma grade de
 ## quadradinhos; os que caem em parede (com folga do corpo do camaleão), na

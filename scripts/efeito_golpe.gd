@@ -1,3 +1,4 @@
+class_name EfeitoGolpe
 extends Node2D
 ## Risco rápido do golpe corpo a corpo: um arco na frente do camaleão, do
 ## tamanho do alcance e da abertura do golpe. Vermelho quando acerta alguém.

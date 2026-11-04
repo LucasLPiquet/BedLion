@@ -1,3 +1,4 @@
+class_name Configuracoes
 extends Control
 ## Tela de configurações: volume e tela cheia. Salva sozinha ao mudar
 ## (partida.gd guarda em user://configuracoes.cfg). Esc / B / Voltar volta para o menu.

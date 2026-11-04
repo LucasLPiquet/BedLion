@@ -1,3 +1,4 @@
+class_name Bot
 extends RefCounted
 ## Cérebro de um bot. Ele joga com os mesmos botões de um jogador: a cada frame
 ## devolve o que estaria "apertando" (direcional, golpe, língua e invisível) e

@@ -1,3 +1,4 @@
+class_name Grude
 extends Node2D
 ## Rastro de grude que a língua com o poder "grude" deixa no chão quando erra:
 ## uma fileira de bolotas verdes por todo o caminho que a língua fez, da boca

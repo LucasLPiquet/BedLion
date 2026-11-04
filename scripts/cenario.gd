@@ -1,3 +1,4 @@
+class_name Cenario
 extends Node2D
 ## Desenha o mapa: chão de ladrilhos com musgo, cerca viva em volta, blocos de
 ## pedra, água com pontes, o chão do capim alto, poças e enfeites (tufos de

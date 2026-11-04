@@ -1,3 +1,4 @@
+class_name LinguaNoChao
 extends Area2D
 ## Poder no chão (tipos em linguas.gd). Um camaleão visível pega se estiver
 ## com a língua básica. Ao ficar invisível ele larga o poder aqui.

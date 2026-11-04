@@ -1,3 +1,4 @@
+class_name Luz
 extends Node2D
 ## Manchas de sol no chão ("luz" em mapas.gd). Dentro delas, quem está invisível
 ## continua sem corpo, mas a sombra aparece no chão. Os camaleões visíveis já

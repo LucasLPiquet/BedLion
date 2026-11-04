@@ -1,3 +1,4 @@
+class_name Ondulacao
 extends Node2D
 ## Ondinha na água: dois anéis achatados que crescem e somem. Aparece quando
 ## alguém (até invisível) anda numa poça, fica parado nela ou anda numa ponte.

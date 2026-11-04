@@ -1,3 +1,4 @@
+class_name Placar
 extends Control
 ## Placar no topo da tela: para cada jogador, um camaleãozinho na cor dele,
 ## o nome e uma bolinha por ponto (preenchida quando ele já ganhou aquele ponto).
