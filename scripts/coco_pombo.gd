@@ -5,6 +5,8 @@ extends Node2D
 ## pegadas por TEMPO_PEGADAS segundos, mesmo invisível. Ele fica TEMPO_NO_CHAO
 ## segundos no chão e some. Quem cria os cocôs (e de quanto em quanto tempo) é o main.gd.
 
+const Desenho := preload("res://scripts/desenho_camaleao.gd")
+
 const TEMPO_AVISO := 1.0
 const TEMPO_NO_CHAO := 15.0
 const TEMPO_PEGADAS := 6.0
@@ -37,7 +39,7 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 		return
 	for camaleao in get_tree().get_nodes_in_group("camaleoes"):
-		if camaleao.vivo and position.distance_to(camaleao.position) <= RAIO_PISAR:
+		if camaleao.vivo and position.distance_to(camaleao.position + Desenho.PES) <= RAIO_PISAR:
 			camaleao.sujar_pes(TEMPO_PEGADAS)
 
 

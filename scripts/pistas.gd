@@ -8,6 +8,7 @@ extends Node
 
 const Mapas := preload("res://scripts/mapas.gd")
 const Ondulacao := preload("res://scripts/ondulacao.gd")
+const Desenho := preload("res://scripts/desenho_camaleao.gd")
 
 ## A cada tantos pixels andados numa poça sai uma ondinha.
 const DISTANCIA_ONDA_POCA := 30.0
@@ -18,7 +19,7 @@ const DISTANCIA_ONDA_PONTE := 45.0
 ## Pegadas molhadas depois de sair da poça.
 const TEMPO_PES_MOLHADOS := 2.5
 const COR_PEGADA_MOLHADA := Color(0.25, 0.32, 0.38, 0.55)
-const PES := Vector2(0, 18)
+const PES := Desenho.PES
 
 var mapa: Dictionary = {}
 var _estado: Dictionary = {} # camaleão -> {"antes", "andado", "parado"}

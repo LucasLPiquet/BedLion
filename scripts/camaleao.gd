@@ -37,6 +37,8 @@ const Bot := preload("res://scripts/bot.gd")
 
 const VELOCIDADE := 300.0
 const RAIO := 18.0
+## Posição central dos pés no chão.
+const PES := Desenho.PES
 ## Distância máxima entre os centros dos dois camaleões para o golpe matar.
 ## Cada camaleão tem raio 18, então 95 deixa uns 60 px de folga entre eles.
 const ALCANCE_GOLPE := 95.0
@@ -704,11 +706,11 @@ func _deixar_pegadas(delta: float) -> void:
 	_pe_esquerdo = not _pe_esquerdo
 	var andando := get_real_velocity().normalized()
 	var lado := andando.orthogonal() * (6.0 if _pe_esquerdo else -6.0)
-	if Mapas.na_poca(mapa, position + Vector2(0, 22)):
+	if Mapas.na_poca(mapa, position + PES):
 		return # dentro da poça não marca (ali quem denuncia são as ondinhas)
 	var pegada := Pegada.new()
 	pegada.cor = _cor_pes
-	pegada.position = position + Vector2(0, 22) + lado # nos pés
+	pegada.position = position + PES + lado # nos pés
 	pegada.rotation = andando.angle()
 	mundo.add_child(pegada)
 
@@ -800,11 +802,11 @@ func _draw() -> void:
 	if _tempo_grudado > 0.0:
 		# Grude verde nos pés.
 		for x in [-8.0, 0.0, 9.0]:
-			draw_circle(Vector2(x, 22), 5.0, Color(Grude.VERDE.darkened(0.15), 0.9))
+			draw_circle(Vector2(x, PES.y), 5.0, Color(Grude.VERDE.darkened(0.15), 0.9))
 	if _tempo_pes_sujos > 0.0:
 		# Manchinhas de cocô (ou de água) nos pés.
 		for x in [-6.0, 8.0]:
-			draw_circle(Vector2(x, 23), 3.5, _cor_pes)
+			draw_circle(Vector2(x, PES.y), 3.5, _cor_pes)
 	if lingua != Linguas.BASICA:
 		# Bolinha em cima da cabeça com a cor do upgrade de língua.
 		var cor_upgrade: Color = Linguas.TIPOS[lingua]["cor"]

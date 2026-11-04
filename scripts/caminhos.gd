@@ -7,6 +7,7 @@ extends RefCounted
 ## A grade de cada mapa é montada uma vez só e fica guardada.
 
 const Mapas := preload("res://scripts/mapas.gd")
+const Desenho := preload("res://scripts/desenho_camaleao.gd")
 
 const TAMANHO_ARENA := Vector2(1600, 900)
 const CERCA := 40.0
@@ -16,7 +17,7 @@ const FOLGA_PAREDE := 22.0
 ## Folga em volta da água (além da beirada que já não afunda).
 const FOLGA_AGUA := 10.0
 ## Os pés (o ponto que afunda) ficam um pouco abaixo do centro.
-const PES := Vector2(0, 12)
+const PES := Desenho.PES
 
 static var _grades: Dictionary = {} # nome do mapa -> AStarGrid2D
 
