@@ -110,3 +110,9 @@ O jogo suporta até 4 participantes simultâneos via teclado e controles externo
 - **Esc:** Volta para o menu.
 - **F1:** Só abrindo a arena direto (sem lobby): alterna os bots de teste (sem, parados, fáceis, médios, difíceis).
 - **F2:** Reinicia a rodada no próximo mapa.
+
+## Documentação
+
+Para consultas técnicas e regras completas:
+- [Regras do Jogo](docs/regras.md)
+- [Arquitetura do Projeto](docs/arquitetura.md)
