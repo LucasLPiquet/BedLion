@@ -19,6 +19,23 @@ Cada jogador controla um camaleão com duas ações principais: lançar a língu
 2. Clique em **Importar** e selecione o arquivo `project.godot` na raiz deste projeto.
 3. Pressione **F5** para iniciar o jogo.
 
+## Menu, lobby e bots
+
+- **Menu inicial**: Jogar, Configurações e Sair (mouse, setas + Enter ou direcional + A).
+- **Configurações**: volume e tela cheia, salvos sozinhos em `user://configuracoes.cfg`. Ainda não há sons; o volume já fica guardado.
+- **Lobby** (depois de Jogar):
+  1. Cada jogador aperta o **golpe** no próprio teclado ou controle (F, . ou A) para entrar numa vaga. Com os **lados** troca a cor do camaleão (8 cores, cada um com uma diferente), com o **golpe** de novo fica pronto e com o **invisível** desfaz ou sai. Quando todo mundo que entrou está pronto (ou alguém clica em Continuar), vai para a escolha dos bots.
+  2. **Bots**: quantos completam a partida (até 4 camaleões; jogando sozinho precisa de pelo menos 1) e a dificuldade: **fácil, médio ou difícil**. Cima/baixo escolhe a linha, os lados mudam, golpe começa e invisível volta. Também dá para clicar.
+  - **Esc** volta para o menu (no lobby e no meio da partida).
+- **Bots** (`scripts/bot.gd`): jogam com os mesmos botões de um jogador (andar, golpe, língua, segurar o invisível), então seguem as mesmas regras: miram andando para o lado, precisam segurar 1 s para sumir, não usam a língua invisíveis, largam o poder ao sumir. Também não trapaceiam: só sabem onde está um invisível pelas pistas que aparecem na tela (sombra no sol, capim mexendo, ondinha na poça ou na ponte, pegadas de pé sujo, o vulto do poder olho) ou porque viram ele sumir ali, e jogam a língua ou golpeiam onde acham que ele está. A dificuldade muda (números em `NIVEIS`, no topo de `bot.gd`):
+  - **tempo de reação** (fácil 0,55 s, médio 0,32 s, difícil 0,16 s): de quanto em quanto tempo pensam, quanto demoram para golpear e para se soltar de uma língua;
+  - **precisão**: quanto a língua sai torta e se adiantam a mira para onde o alvo está indo;
+  - **agressividade**: ir para cima ou ficar longe esperando;
+  - **uso de poderes**: buscar bolhas e usar cada poder direito (gancho para fugir ou chegar, muda de pele quando está em perigo);
+  - **uso da invisibilidade**: com que frequência somem para caçar no corpo a corpo, e se evitam sol, capim e poças quando estão invisíveis;
+  - **detecção de invisível**: chance de notar cada pista (e de não cair na pele velha da muda), e por quanto tempo lembram onde viram um invisível;
+  - **esquiva**: chance de sair da frente de uma língua vindo neles.
+
 - Cada camaleão tem dois ataques: a **língua** e o **golpe**.
 - **Língua** (só visível): sai reta da boca, vai até uns 330 px e volta. Se pegar outro camaleão, puxa ele até você em 0,5 s. A língua **não mata**: a ideia é trazer o outro para perto e dar o golpe. Se bater numa parede (ou na pedra do meio), ela para ali e volta, sem puxar ninguém; ela não pega quem está atrás de parede, e se uma parede ficar no meio enquanto puxa, ela solta.
   - Enquanto a língua está fora (indo, voltando ou puxando) você fica parado e não pode golpear: é a hora em que você está vulnerável.
@@ -61,9 +78,12 @@ Cada jogador controla um camaleão com duas ações principais: lançar a língu
 
 O jogo suporta até 4 participantes simultâneos via teclado e controles externos:
 
-- `scenes/main.tscn`: cena principal (a arena é montada por código).
-- `scripts/main.gd`: arena, quem joga, rodadas e placar.
-- `scripts/camaleao.gd`: movimento, língua, invisibilidade, golpe e o bot de teste.
+- `scenes/menu.tscn`, `scenes/lobby.tscn`, `scenes/configuracoes.tscn`: menu inicial (a primeira cena), lobby e configurações (`scripts/menu.gd`, `scripts/lobby.gd`, `scripts/configuracoes.gd`; peças visuais em `scripts/ui.gd`).
+- `scenes/main.tscn`: a arena (montada por código). Aberta direto (F6 no editor), entram os teclados e controles conectados, e F1 liga bots de teste.
+- `scripts/partida.gd`: quem joga (vem do lobby), cores, dificuldades e configurações (autoload `Partida`).
+- `scripts/main.gd`: arena, rodadas e placar.
+- `scripts/camaleao.gd`: movimento, língua, invisibilidade e golpe (de jogadores e bots).
+- `scripts/bot.gd`: o que os bots pensam e quais botões apertam, por dificuldade.
 - `scripts/desenho_camaleao.gd`: desenho do camaleão (feito com formas, sem imagem).
 - `scripts/coco_pombo.gd` e `scripts/pegada.gd`: cocô de pombo que cai do céu e as pegadas de quem pisa nele (ou sai de uma poça).
 - `scripts/mapas.gd`: lista de mapas (paredes, água, pontes, onde cada um começa, onde caem os upgrades).
@@ -85,5 +105,6 @@ O jogo suporta até 4 participantes simultâneos via teclado e controles externo
 - `arte/referencia_camaleao.jpg`: desenho de referência do camaleão.
 
 ### Atalhos
-- **F1:** Alterna o preenchimento de vagas com bots de teste.
+- **Esc:** Volta para o menu.
+- **F1:** Só abrindo a arena direto (sem lobby): alterna os bots de teste (sem, parados, fáceis, médios, difíceis).
 - **F2:** Reinicia a rodada no próximo mapa.

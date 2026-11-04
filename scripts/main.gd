@@ -1,6 +1,7 @@
 extends Node2D
-## Monta a arena, escolhe quem joga (teclados, controles e bots) e controla
-## rodadas, placar e partida. Ganha a partida quem fizer PONTOS_PARA_VENCER.
+## Monta a arena e controla rodadas, placar e partida. Quem joga vem do lobby
+## (Partida.jogadores, ver lobby.gd); se a arena for aberta direto (F6 no editor),
+## entram os teclados e controles conectados, e F1 liga bots de teste. Ganha a partida quem fizer PONTOS_PARA_VENCER.
 ## A cada rodada o mapa muda: os mapas de mapas.gd são embaralhados e saem um
 ## por vez, então todos aparecem antes de algum repetir. F2 pula para o próximo mapa.
 
@@ -30,9 +31,10 @@ const PAUSA_FIM_PARTIDA := 4.0
 ## Teclados que entram no jogo (tire um daqui se quiser jogar só com um).
 const TECLADOS := ["teclado1", "teclado2"]
 const MAX_JOGADORES := 4
-## Modos dos bots de teste, trocados com F1: completam até MAX_JOGADORES.
-const MODOS_BOT := ["", "parado", "andando"]
-const NOMES_MODO_BOT := ["sem bots", "bots parados", "bots andando"]
+## Modos dos bots de teste (só abrindo a arena direto), trocados com F1:
+## completam até MAX_JOGADORES. As dificuldades estão em bot.gd.
+const MODOS_BOT := ["", "parado", "facil", "medio", "dificil"]
+const NOMES_MODO_BOT := ["sem bots", "bots parados", "bots fáceis", "bots médios", "bots difíceis"]
 
 ## Quanto tempo o nome do mapa fica na tela no começo da rodada.
 const TEMPO_NOME_MAPA := 1.8
@@ -59,6 +61,7 @@ const VAGAS := [
 
 var placar: Array = []
 var _jogadores: Array = [] # cada um: {"nome", "cor", "controle", "bot"}
+var _veio_do_lobby := false # quem joga foi escolhido no lobby (aí F1 e controles novos não mudam nada)
 var _indice_mapa := -1 # qual dos Mapas.MAPAS está em jogo
 var _proximos_mapas: Array = [] # índices que ainda vão sair nesta volta (embaralhados)
 var _mapa: Dictionary = {}
@@ -77,6 +80,7 @@ var _rotulo_ajuda: Label
 func _ready() -> void:
 	# A tela mostra a arena inteira (TAMANHO), seja qual for o tamanho da janela.
 	get_window().content_scale_size = Vector2i(TAMANHO)
+	_veio_do_lobby = not Partida.jogadores.is_empty()
 	_montar_hud()
 	Input.joy_connection_changed.connect(_ao_mudar_controles)
 	_nova_partida()
@@ -86,7 +90,9 @@ func _unhandled_input(evento: InputEvent) -> void:
 	var tecla := evento as InputEventKey
 	if not (tecla and tecla.pressed and not tecla.echo):
 		return
-	if tecla.keycode == KEY_F1:
+	if tecla.keycode == KEY_ESCAPE:
+		Partida.ir_para(Partida.CENA_MENU)
+	elif tecla.keycode == KEY_F1 and not _veio_do_lobby:
 		_modo_bot = (_modo_bot + 1) % MODOS_BOT.size()
 		_nova_partida()
 	elif tecla.keycode == KEY_F2:
@@ -95,8 +101,10 @@ func _unhandled_input(evento: InputEvent) -> void:
 
 
 func _ao_mudar_controles(_aparelho: int, _conectado: bool) -> void:
-	# Um controle entrou ou saiu: monta os jogadores de novo e recomeça.
-	_nova_partida()
+	# Um controle entrou ou saiu: monta os jogadores de novo e recomeça
+	# (só sem lobby; com lobby, quem joga já foi escolhido lá).
+	if not _veio_do_lobby:
+		_nova_partida()
 
 
 ## Escolhe o mapa da rodada. Os mapas saem de uma "sacola" embaralhada: só
@@ -197,9 +205,13 @@ func _criar_rotulo(posicao: Vector2, tamanho_fonte: int, contorno: int) -> Label
 	return rotulo
 
 
-## Quem joga: primeiro os teclados, depois cada controle conectado, e os bots
-## (se ligados com F1) completam até MAX_JOGADORES.
+## Quem joga: o que foi escolhido no lobby. Sem lobby, primeiro os teclados,
+## depois cada controle conectado, e os bots (se ligados com F1) completam até MAX_JOGADORES.
 func _escolher_jogadores() -> void:
+	if _veio_do_lobby:
+		_jogadores = Partida.jogadores.duplicate(true)
+		_escrever_ajuda()
+		return
 	var controles: Array = TECLADOS.duplicate()
 	for pad in Input.get_connected_joypads():
 		if pad < Controles.MAX_PADS:
@@ -222,15 +234,21 @@ func _escolher_jogadores() -> void:
 			jogador["controle"] = ""
 			jogador["bot"] = modo if modo != "" else "parado"
 		_jogadores.append(jogador)
+	_escrever_ajuda()
 
+
+func _escrever_ajuda() -> void:
 	var partes := PackedStringArray()
 	for jogador in _jogadores:
 		var como: String = Controles.descricao(jogador["controle"])
-		if jogador["bot"] != "":
-			como = "bot " + jogador["bot"]
+		var bot: String = jogador["bot"]
+		if bot != "":
+			como = "bot " + Partida.NOMES_DIFICULDADE.get(bot, bot).to_lower()
 		partes.append("%s: %s" % [jogador["nome"], como])
-	partes.append("F1: %s" % NOMES_MODO_BOT[_modo_bot])
+	if not _veio_do_lobby:
+		partes.append("F1: %s" % NOMES_MODO_BOT[_modo_bot])
 	partes.append("F2: próximo mapa")
+	partes.append("Esc: menu")
 	_rotulo_ajuda.text = "(golpe / invisível / língua)    " + "    |    ".join(partes)
 
 
