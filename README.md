@@ -35,6 +35,8 @@ Cada jogador controla um camaleão com duas ações principais: lançar a língu
   - **uso da invisibilidade**: com que frequência somem para caçar no corpo a corpo, e se evitam sol, capim e poças quando estão invisíveis;
   - **detecção de invisível**: chance de notar cada pista (e de não cair na pele velha da muda), e por quanto tempo lembram onde viram um invisível;
   - **esquiva**: chance de sair da frente de uma língua vindo neles.
+  - Para andar, os bots acham o caminho pelo mapa (`scripts/caminhos.gd`: uma grade em volta das paredes e da água, com as pontes livres), então contornam muros e rios em vez de ficar empurrando a parede. Conferem o caminho inteiro antes de andar, para não cortar a água do lado de uma ponte.
+  - Poderes: com o **gancho** eles se puxam pelas paredes para chegar longe mais rápido (ou fugir), só quando o voo ajuda e não termina na água; com o **grude** jogam a língua no caminho de quem vem, mesmo de longe, para deixar o rastro entre os dois; e qualquer bot corre para golpear quem ficou grudado.
 
 - Cada camaleão tem dois ataques: a **língua** e o **golpe**.
 - **Língua** (só visível): sai reta da boca, vai até uns 330 px e volta. Se pegar outro camaleão, puxa ele até você em 0,5 s. A língua **não mata**: a ideia é trazer o outro para perto e dar o golpe. Se bater numa parede (ou na pedra do meio), ela para ali e volta, sem puxar ninguém; ela não pega quem está atrás de parede, e se uma parede ficar no meio enquanto puxa, ela solta.

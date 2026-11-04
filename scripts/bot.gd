@@ -28,6 +28,7 @@ extends RefCounted
 
 const Mapas := preload("res://scripts/mapas.gd")
 const Linguas := preload("res://scripts/linguas.gd")
+const Caminhos := preload("res://scripts/caminhos.gd")
 
 const NIVEIS := {
 	"facil": {
@@ -55,6 +56,8 @@ const DISTANCIA_SEGURA := 420.0
 const OLHAR_A_FRENTE := 46.0
 ## Empurrão do direcional só para virar (mirar) sem sair andando.
 const TOQUE_MIRAR := 0.15
+## O gancho só vale se o voo deixar pelo menos isso mais perto (ou mais longe, fugindo).
+const GANHO_GANCHO := 150.0
 ## Invisível há tanto tempo sem achar ninguém: aparece de novo.
 const TEMPO_MAXIMO_INVISIVEL := 12.0
 
@@ -79,6 +82,9 @@ var _tempo_invisivel := 0.0
 var _sem_alvo := 0.0 # segundos sem saber onde está ninguém
 var _evitar_pistas := false
 var _lado := 1.0 # para que lado contorna as paredes (fica o mesmo por um tempo)
+var _rota: Array[Vector2] = [] # caminho pelo mapa até o destino (caminhos.gd)
+var _rota_para := Vector2.INF # para qual destino a rota foi calculada
+var _tempo_rota := 0.0 # quando recalcular a rota
 var _tentou_se_soltar := false
 var _brigando := true # no momento quer ir para cima (sorteado pela agressividade)
 var _tempo_humor := 0.0 # quando sorteia de novo se quer briga
@@ -196,8 +202,6 @@ func _pensar() -> void:
 	var agressividade: float = nivel["agressividade"]
 	var poderes: float = nivel["poderes"]
 	_evitar_pistas = eu.invisivel and randf() < float(nivel["cuidado"])
-	if randf() < 0.1:
-		_lado = -_lado
 
 	var alvo := _alvo_visivel()
 	var suspeita := _suspeita_mais_recente()
@@ -231,16 +235,42 @@ func _pensar() -> void:
 		var longe := eu.position.distance_to(alvo.position) > 450.0
 		if longe and (_buscar_bolha(poderes, alvo.position) or _talvez_sumir(poderes)):
 			return
-		_pensar_com_alvo(alvo.position, _velocidade_de(alvo), agressividade, poderes)
+		_pensar_com_alvo(alvo.position, _velocidade_de(alvo), _grudado(alvo), agressividade, poderes)
 	elif suspeita != Vector2.INF:
 		# Um invisível foi notado: a língua pega (e revela) invisível também.
-		_pensar_com_alvo(suspeita, Vector2.ZERO, agressividade, poderes)
+		_pensar_com_alvo(suspeita, Vector2.ZERO, false, agressividade, poderes)
 	else:
 		_pensar_sem_alvo(poderes)
+	_talvez_gancho(poderes)
+
+
+## Poder "gancho": em vez de andar até longe, se puxa pelas paredes (chance por
+## segundo, conforme "poderes"). Só quando um voo deixa bem mais perto do destino.
+func _talvez_gancho(poderes: float) -> void:
+	if eu.lingua != "gancho" or eu.invisivel or _mira_lingua != Vector2.ZERO or _destino == Vector2.INF:
+		return
+	if eu.position.distance_to(_destino) < 280.0 or not _pode_lancar_lingua():
+		return
+	if randf() < poderes * 1.5 * _intervalo:
+		var direcao := _direcao_gancho(_destino, false)
+		if direcao != Vector2.ZERO:
+			var destino := _destino
+			_planejar_lingua(direcao)
+			_destino = destino # depois do voo continua indo para o mesmo lugar
+
+
+## Está preso num grude (não anda nem usa a língua por um tempinho)?
+func _grudado(alvo: Node2D) -> bool:
+	if not (alvo is CharacterBody2D):
+		return false
+	var tempo: float = alvo._tempo_grudado
+	return tempo > 0.0
 
 
 ## Com um alvo à vista (ou suspeita de onde está um invisível).
-func _pensar_com_alvo(onde: Vector2, velocidade: Vector2, agressividade: float, poderes: float) -> void:
+## preso: o alvo está grudado num grude (hora de correr e golpear).
+func _pensar_com_alvo(onde: Vector2, velocidade: Vector2, preso: bool, agressividade: float,
+		poderes: float) -> void:
 	var distancia := eu.position.distance_to(onde)
 	var alcance: float = Linguas.TIPOS[eu.lingua]["alcance"]
 	var parede: bool = eu._bate_em_parede(eu.position, onde)
@@ -248,16 +278,21 @@ func _pensar_com_alvo(onde: Vector2, velocidade: Vector2, agressividade: float, 
 	if distancia <= eu.ALCANCE_GOLPE * 0.9 and not parede:
 		_destino = Vector2.INF # o golpe é tratado a cada frame em agir()
 		return
+	# Grudado não foge: perto, corre e golpeia (a língua arrancaria ele do grude).
+	if preso and (distancia < 320.0 or parede):
+		_destino = onde
+		return
+	# Poder "grude": joga a língua no caminho de quem vem, mesmo de longe. Se
+	# errar, o rastro de grude fica no chão entre os dois e prende quem passar.
+	if eu.lingua == "grude" and caminho_livre and _pode_lancar_lingua() \
+			and distancia >= alcance * 0.92 and distancia < alcance + 380.0 \
+			and randf() < poderes * 1.5 * _intervalo:
+		_planejar_lingua(eu.position.direction_to(onde + velocidade * 0.7))
+		return
 	if caminho_livre and distancia < alcance * 0.92 and _pode_lancar_lingua() \
 			and randf() < 0.25 + 0.6 * agressividade:
 		_planejar_lingua(_mirar(onde, velocidade, distancia))
 		return
-	# Gancho para chegar mais rápido perto de quem está longe.
-	if eu.lingua == "gancho" and distancia > 500.0 and _brigando and randf() < poderes * 0.8 * _intervalo:
-		var chegada := _direcao_gancho(onde, false)
-		if chegada != Vector2.ZERO:
-			_planejar_lingua(chegada)
-			return
 	if _brigando:
 		_destino = onde
 	elif distancia < DISTANCIA_SEGURA:
@@ -526,8 +561,9 @@ func _mais_perto(nos: Array) -> Node2D:
 
 # --- Andar ------------------------------------------------------------------
 
-## Direção do direcional neste frame: vai para o destino contornando paredes,
-## água (e, se for o caso, grude e lugares que deixam pista).
+## Direção do direcional neste frame: vai para o destino pelo caminho do mapa
+## (contornando paredes e rios), desviando no caminho de água, grude e, se for
+## o caso, de lugares que deixam pista.
 func _movimento(delta: float) -> Vector2:
 	if _tempo_esquiva > 0.0:
 		_tempo_esquiva -= delta
@@ -538,18 +574,57 @@ func _movimento(delta: float) -> Vector2:
 	if _destino == Vector2.INF or eu.position.distance_to(_destino) < 12.0:
 		_tempo_travado = 0.0
 		return Vector2.ZERO
-	var direcao := _contornar(eu.position.direction_to(_destino))
-	# Querendo andar mas quase parado (enroscado numa quina): sorteia outra direção um pouco.
+	var direcao := _contornar(eu.position.direction_to(_proximo_ponto(delta)))
+	# Querendo andar mas quase parado (enroscado numa quina): sai para um lado
+	# um pouco e calcula a rota de novo.
 	if direcao != Vector2.ZERO and eu.get_real_velocity().length() < eu.VELOCIDADE * 0.25:
 		_tempo_travado += delta
-		if _tempo_travado > 0.4:
+		if _tempo_travado > 0.5:
 			_tempo_travado = 0.0
-			_fuga_travado = Vector2.from_angle(randf() * TAU)
-			_tempo_fuga_travado = 0.5
+			_fuga_travado = _contornar(Vector2.from_angle(randf() * TAU))
+			_tempo_fuga_travado = 0.35
 			_lado = -_lado
+			_tempo_rota = 0.0
 	else:
 		_tempo_travado = 0.0
 	return direcao
+
+
+## Para onde andar agora: direto para o destino se der (nada no meio), senão o
+## ponto mais adiantado da rota que dá para alcançar em linha reta.
+func _proximo_ponto(delta: float) -> Vector2:
+	if _trajeto_livre(eu.position, _destino):
+		_rota.clear()
+		return _destino
+	_tempo_rota -= delta
+	if _rota.is_empty() or _tempo_rota <= 0.0 or _rota_para.distance_to(_destino) > 40.0:
+		_rota = Caminhos.caminho(eu.mapa, eu.position, _destino)
+		_rota_para = _destino
+		_tempo_rota = 0.6
+	while not _rota.is_empty() and eu.position.distance_to(_rota[0]) < 16.0:
+		_rota.remove_at(0)
+	if _rota.is_empty():
+		return _destino
+	# Pula os pontos do meio quando dá para ir reto até um mais adiante.
+	var melhor := 0
+	for i in range(1, mini(_rota.size(), 6)):
+		if _trajeto_livre(eu.position, _rota[i]):
+			melhor = i
+	for _i in melhor:
+		_rota.remove_at(0)
+	return _rota[0]
+
+
+## Dá para andar em linha reta daqui até lá sem bater (o corpo todo) nem cair na água?
+func _trajeto_livre(de: Vector2, ate: Vector2) -> bool:
+	if Mapas.caminho_afunda(eu.mapa, de, ate, 10.0):
+		return false
+	var raio: float = eu.RAIO
+	var lado := de.direction_to(ate).orthogonal() * (raio - 2.0)
+	for desvio: Vector2 in [Vector2.ZERO, lado, -lado]:
+		if eu._bate_em_parede(de + desvio, ate + desvio):
+			return false
+	return true
 
 
 ## A direção livre mais parecida com a desejada (gira um pouco por vez para o
@@ -569,7 +644,7 @@ func _contornar(desejada: Vector2) -> Vector2:
 
 func _livre(direcao: Vector2) -> bool:
 	var a_frente := eu.position + direcao * OLHAR_A_FRENTE
-	if Mapas.afunda(eu.mapa, a_frente):
+	if Mapas.caminho_afunda(eu.mapa, eu.position, a_frente):
 		return false
 	# Confere o corpo todo (o meio e os dois lados), não só uma linha.
 	var raio: float = eu.RAIO
@@ -622,26 +697,41 @@ func _ponto_qualquer() -> Vector2:
 
 ## Poder "gancho": direção para jogar a língua numa parede e voar até ela.
 ## longe = true: a parede que deixa mais longe de "ponto" (fugir); false: a
-## que deixa mais perto (chegar). ZERO se nenhuma serve.
+## que deixa mais perto (chegar). Só vale se o voo ajudar de verdade (pelo
+## menos GANHO_GANCHO px), não enroscar em quina no caminho e não terminar na
+## água. ZERO se nenhuma serve.
 func _direcao_gancho(ponto: Vector2, longe: bool) -> Vector2:
 	var alcance: float = Linguas.TIPOS["gancho"]["alcance"]
+	var raio: float = eu.RAIO
+	var agora := eu.position.distance_to(ponto)
 	var melhor := Vector2.ZERO
 	var melhor_nota := -INF
-	for i in 16:
-		var direcao := Vector2.from_angle(TAU * i / 16.0)
+	for i in 24:
+		var direcao := Vector2.from_angle(TAU * i / 24.0)
 		var batida: Dictionary = eu._parede_entre(eu.position, eu.position + direcao * alcance)
 		if batida.is_empty():
 			continue
 		var parede: Vector2 = batida["position"]
-		if eu.position.distance_to(parede) < 150.0:
+		var voo := eu.position.distance_to(parede)
+		if voo < 140.0:
 			continue
-		var raio: float = eu.RAIO
-		var chegada := parede - direcao * (raio + 12.0)
-		if Mapas.afunda(eu.mapa, chegada):
+		# O voo para a RAIO + 8 px da parede (camaleao.gd).
+		var chegada := parede - direcao * (raio + 8.0)
+		if Mapas.afunda(eu.mapa, chegada) or Mapas.afunda(eu.mapa, chegada - direcao * 20.0):
 			continue
-		var nota := chegada.distance_to(ponto)
-		if not longe:
-			nota = -nota
+		# Os lados do corpo também não podem bater antes (senão enrosca numa quina e cai no meio).
+		var lado := direcao.orthogonal() * (raio - 2.0)
+		var enrosca := false
+		for desvio: Vector2 in [lado, -lado]:
+			var batida_lado: Dictionary = eu._parede_entre(eu.position + desvio, chegada + desvio)
+			if not batida_lado.is_empty():
+				enrosca = true
+		if enrosca:
+			continue
+		var depois := chegada.distance_to(ponto)
+		var nota := depois - agora if longe else agora - depois
+		if nota < GANHO_GANCHO:
+			continue
 		if nota > melhor_nota:
 			melhor_nota = nota
 			melhor = direcao

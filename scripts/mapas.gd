@@ -236,6 +236,19 @@ static func afunda(mapa: Dictionary, posicao: Vector2) -> bool:
 	return na_agua(mapa, posicao + PES, MARGEM_BEIRADA)
 
 
+## Andar em linha reta de "de" até "ate" faz cair na água em algum ponto do
+## caminho (e não só no fim)? Confere de "passo" em "passo" pixels.
+## Serve para os bots: perto de uma ponte, o fim da linha pode estar na ponte
+## enquanto o meio corta a água do lado dela.
+static func caminho_afunda(mapa: Dictionary, de: Vector2, ate: Vector2, passo := 8.0) -> bool:
+	var distancia := de.distance_to(ate)
+	var pedacos := maxi(1, ceili(distancia / passo))
+	for i in range(1, pedacos + 1):
+		if afunda(mapa, de.lerp(ate, float(i) / pedacos)):
+			return true
+	return false
+
+
 ## O ponto está numa poça rasa?
 static func na_poca(mapa: Dictionary, ponto: Vector2) -> bool:
 	for poca in mapa.get("pocas", []):
