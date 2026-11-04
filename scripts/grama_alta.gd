@@ -6,6 +6,7 @@ extends Node2D
 ## ficam mais claras e demoram para voltar: fica um rastro de por onde a pessoa andou.
 
 const Mapas := preload("res://scripts/mapas.gd")
+const Desenho := preload("res://scripts/desenho_camaleao.gd")
 
 ## Uma folha a cada tantos pixels quadrados de capim.
 const AREA_POR_FOLHA := 150.0
@@ -18,7 +19,7 @@ const DOBRA_MAXIMA := 1.1
 const VELOCIDADE_DEITAR := 9.0
 const VELOCIDADE_VOLTAR := 0.8
 ## Os pés ficam um pouco abaixo do centro do camaleão.
-const PES := Vector2(0, 18)
+const PES := Desenho.PES
 
 const COR := Color(0.36, 0.58, 0.22)
 const COR_CONTORNO := Color(0.12, 0.22, 0.08)

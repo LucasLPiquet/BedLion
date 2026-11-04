@@ -8,6 +8,8 @@ const CONTORNO := Color(0.08, 0.07, 0.1)
 const LARGURA := 2.0
 ## Tamanho do desenho dentro do jogo (1.0 = umas 50 px de altura).
 const ESCALA_JOGO := 1.2
+## Posição central dos pés em relação ao centro do camaleão (no chão).
+const PES := Vector2(0, 18)
 
 
 ## item: o nó que está desenhando (dentro do _draw dele).

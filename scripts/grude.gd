@@ -7,6 +7,8 @@ extends Node2D
 ## rastro continua lá. Quem soltou o grude não gruda nele.
 ## O rastro some depois de DURACAO segundos (ou quando todos os pedaços já pegaram alguém).
 
+const Desenho := preload("res://scripts/desenho_camaleao.gd")
+
 const DURACAO := 10.0
 const TEMPO_PRESO := 1.2
 ## Só começa a pegar depois disso (para não grudar quem está bem em cima na hora).
@@ -61,7 +63,7 @@ func _physics_process(delta: float) -> void:
 	for camaleao in get_tree().get_nodes_in_group("camaleoes"):
 		if camaleao == dono or not camaleao.vivo:
 			continue
-		var pes: Vector2 = camaleao.position + Vector2(0, 12)
+		var pes: Vector2 = camaleao.position + Desenho.PES
 		if _pisou(pes) and camaleao.grudar(TEMPO_PRESO):
 			_gastar(pes)
 

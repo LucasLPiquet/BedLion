@@ -28,6 +28,7 @@ extends RefCounted
 
 const Mapas := preload("res://scripts/mapas.gd")
 const Linguas := preload("res://scripts/linguas.gd")
+const Desenho := preload("res://scripts/desenho_camaleao.gd")
 const Caminhos := preload("res://scripts/caminhos.gd")
 
 const NIVEIS := {
@@ -49,7 +50,7 @@ const NIVEIS := {
 }
 
 ## Pés do camaleão (onde pisa no capim, na poça, no grude).
-const PES := Vector2(0, 18)
+const PES := Desenho.PES
 ## Distância que ele tenta manter quando não quer briga (fora do alcance da língua).
 const DISTANCIA_SEGURA := 420.0
 ## Quanto à frente ele confere parede e água antes de andar.
@@ -478,7 +479,7 @@ func _pista_de(outro: Node) -> float:
 	var mapa: Dictionary = eu.mapa
 	var pes: Vector2 = outro.position + PES
 	var andando: bool = outro.get_real_velocity().length() > 20.0
-	if Mapas.na_luz(mapa, outro.position + Vector2(0, 25)):
+	if Mapas.na_luz(mapa, outro.position + PES):
 		return 8.0 # sombra no sol: bem certinho
 	if Mapas.na_poca(mapa, pes) and (andando or randf() < 0.3):
 		return 14.0 # ondinhas
@@ -669,7 +670,7 @@ func _livre(direcao: Vector2) -> bool:
 
 func _pisaria_grude(ponto: Vector2) -> bool:
 	for grude in eu.get_tree().get_nodes_in_group("grudes"):
-		if grude.dono != eu and grude._pisou(ponto + Vector2(0, 12)):
+		if grude.dono != eu and grude._pisou(ponto + PES):
 			return true
 	return false
 
@@ -677,7 +678,7 @@ func _pisaria_grude(ponto: Vector2) -> bool:
 ## Este lugar entrega quem está invisível (sol, poça, capim)?
 func _deixaria_pista(ponto: Vector2) -> bool:
 	var mapa: Dictionary = eu.mapa
-	if Mapas.na_luz(mapa, ponto + Vector2(0, 25)) or Mapas.na_poca(mapa, ponto + PES):
+	if Mapas.na_luz(mapa, ponto + PES) or Mapas.na_poca(mapa, ponto + PES):
 		return true
 	for item in mapa.get("grama", []):
 		var capim: Rect2 = item

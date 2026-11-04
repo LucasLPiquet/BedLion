@@ -4,10 +4,11 @@ extends Node2D
 ## desenham a própria sombra (desenho_camaleao.gd).
 
 const Mapas := preload("res://scripts/mapas.gd")
+const Desenho := preload("res://scripts/desenho_camaleao.gd")
 
 const COR_SOL := Color(1.0, 0.95, 0.7)
-## Sombra do invisível: mesmo lugar e tamanho da sombra do desenho do camaleão.
-const POSICAO_SOMBRA := Vector2(0, 25)
+## Sombra do invisível: projetada na posição dos pés do camaleão no chão.
+const POSICAO_SOMBRA := Desenho.PES
 const TAMANHO_SOMBRA := Vector2(20, 6)
 const FORCA_SOMBRA := 0.32
 ## Quanto tempo a sombra leva para aparecer ou sumir quando ele entra ou sai do sol.

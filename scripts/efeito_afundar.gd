@@ -51,7 +51,7 @@ func _draw() -> void:
 
 func _desenhar_respingo() -> void:
 	var t := _tempo / DURACAO
-	var pes := Vector2(0, 14) # onde o corpo encosta na água
+	var pes := Desenho.PES # onde o corpo encosta na água
 
 	# Ondas que se abrem (achatadas, como se fossem no chão).
 	_respingo.draw_set_transform(pes, 0.0, Vector2(1.0, 0.45))

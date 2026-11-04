@@ -1,4 +1,5 @@
 extends RefCounted
+const Desenho := preload("res://scripts/desenho_camaleao.gd")
 ## Lista de mapas. A cada rodada o jogo sorteia um deles (nunca o mesmo da
 ## rodada anterior). Para criar um mapa novo, copie um dos blocos { ... } abaixo,
 ## mude o nome e as posições, e pronto: ele já entra no sorteio.
@@ -202,7 +203,7 @@ const MAPAS := [
 
 ## O camaleão afunda quando este ponto (um pouco abaixo do centro, perto dos pés)
 ## entra na água. Fica um pouquinho de margem na beirada, para não morrer só de encostar.
-const PES := Vector2(0, 12)
+const PES := Desenho.PES
 const MARGEM_BEIRADA := 6.0
 
 
