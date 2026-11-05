@@ -19,16 +19,38 @@ var mapa: Dictionary = {}
 var _sombras: Dictionary = {} # camaleão -> força atual da sombra (0 a 1)
 var _poeira: Array = [] # [posição, fase, velocidade] grãozinhos brilhando no sol
 var _tempo := 0.0
+var _camada_sol: Node2D
+var _estilos_sol: Array = [] # [Rect2, StyleBoxFlat] pré-alocados uma vez só
 
 
 func _ready() -> void:
 	z_index = -8 # por cima do chão e da água, por baixo dos camaleões
+	_camada_sol = Node2D.new()
+	_camada_sol.draw.connect(_desenhar_sol)
+	add_child(_camada_sol)
 	for item in mapa.get("luz", []):
 		var retangulo: Rect2 = item
+		for passo in 4:
+			var forma := retangulo.grow(-passo * 10.0)
+			if forma.size.x <= 0.0 or forma.size.y <= 0.0:
+				break
+			var estilo := StyleBoxFlat.new()
+			estilo.bg_color = Color(COR_SOL, 0.13)
+			estilo.set_corner_radius_all(int(minf(forma.size.x, forma.size.y) / 3.0))
+			estilo.corner_detail = 12
+			estilo.anti_aliasing = true
+			_estilos_sol.append([forma, estilo])
 		for i in int(retangulo.get_area() / 7000.0) + 2:
 			_poeira.append([Vector2(randf_range(retangulo.position.x, retangulo.end.x),
 				randf_range(retangulo.position.y, retangulo.end.y)), randf() * TAU, randf_range(4.0, 10.0)])
 	set_process(not mapa.get("luz", []).is_empty())
+
+
+func _desenhar_sol() -> void:
+	for item in _estilos_sol:
+		var forma: Rect2 = item[0]
+		var estilo: StyleBoxFlat = item[1]
+		estilo.draw(_camada_sol.get_canvas_item(), forma)
 
 
 func _process(delta: float) -> void:
@@ -47,19 +69,6 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-	# Sol: retângulos de cantos redondos uns dentro dos outros, para a borda ficar macia.
-	for item in mapa.get("luz", []):
-		var retangulo: Rect2 = item
-		for passo in 4:
-			var forma := retangulo.grow(-passo * 10.0)
-			if forma.size.x <= 0.0 or forma.size.y <= 0.0:
-				break
-			var estilo := StyleBoxFlat.new()
-			estilo.bg_color = Color(COR_SOL, 0.13)
-			estilo.set_corner_radius_all(int(minf(forma.size.x, forma.size.y) / 3.0))
-			estilo.corner_detail = 12
-			estilo.anti_aliasing = true
-			estilo.draw(get_canvas_item(), forma)
 	# Poeirinha brilhando, subindo devagar.
 	for grao in _poeira:
 		var fase: float = grao[1]

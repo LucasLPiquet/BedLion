@@ -32,8 +32,12 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	var tempo_anterior := _tempo
 	_tempo += delta
-	queue_redraw()
+	if _tempo < TEMPO_AVISO or (_tempo - TEMPO_AVISO) <= 0.25 or (TEMPO_AVISO + TEMPO_NO_CHAO - _tempo) <= 1.0:
+		queue_redraw()
+	elif (tempo_anterior - TEMPO_AVISO) <= 0.25:
+		queue_redraw()
 	if _tempo < TEMPO_AVISO:
 		return
 	if _tempo >= TEMPO_AVISO + TEMPO_NO_CHAO:

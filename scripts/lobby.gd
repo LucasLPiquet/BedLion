@@ -44,11 +44,23 @@ var _rotulo_bots: Label
 var _botoes_dificuldade: Array = []
 var _rotulo_linha_bots: Label
 var _rotulo_linha_dificuldade: Label
+var _fundo_cartao: StyleBoxFlat
+var _fundo_cartao_vazio: StyleBoxFlat
 
 
 func _ready() -> void:
 	size = Ui.TAMANHO
 	Ui.fundo(self)
+	_fundo_cartao = StyleBoxFlat.new()
+	_fundo_cartao.set_corner_radius_all(22)
+	_fundo_cartao.set_border_width_all(4)
+	_fundo_cartao.bg_color = Ui.COR_PAINEL
+
+	_fundo_cartao_vazio = StyleBoxFlat.new()
+	_fundo_cartao_vazio.set_corner_radius_all(22)
+	_fundo_cartao_vazio.set_border_width_all(4)
+	_fundo_cartao_vazio.bg_color = Color(Ui.COR_PAINEL, 0.45)
+	_fundo_cartao_vazio.border_color = Color(0, 0, 0, 0.6)
 	_quantidade_bots = Partida.quantidade_bots
 	_dificuldade = Partida.dificuldade_bots
 
@@ -420,17 +432,12 @@ func _desenhar_vagas() -> void:
 			cartao.size.y = 400.0
 		var meio := cartao.position.x + LARGURA_CARTAO / 2.0
 		var vaga: Dictionary = _vagas[i]
-		var fundo := StyleBoxFlat.new()
-		fundo.set_corner_radius_all(22)
-		fundo.set_border_width_all(4)
-		fundo.bg_color = Ui.COR_PAINEL
-		fundo.border_color = Color(0, 0, 0, 0.6)
 
 		if not vaga.is_empty():
 			var cor: Color = Partida.CORES[vaga["cor"]]["cor"]
 			var pronto: bool = vaga["pronto"]
-			fundo.border_color = cor if pronto else Color(cor, 0.5)
-			fundo.draw(_desenho.get_canvas_item(), cartao)
+			_fundo_cartao.border_color = cor if pronto else Color(cor, 0.5)
+			_fundo_cartao.draw(_desenho.get_canvas_item(), cartao)
 			_texto(fonte, Vector2(meio, cartao.position.y + 50), "Jogador %d" % (i + 1), 28, Color.WHITE)
 			var balanco := 0.0 if pronto else sin(_tempo * 3.0 + i) * 5.0
 			var passo := _tempo * 7.0 if not pronto else 0.0
@@ -450,8 +457,8 @@ func _desenhar_vagas() -> void:
 			var indice: int = cores_bots[proximo_bot]
 			proximo_bot += 1
 			var cor_bot: Color = Partida.CORES[indice]["cor"]
-			fundo.border_color = Color(cor_bot, 0.4)
-			fundo.draw(_desenho.get_canvas_item(), cartao)
+			_fundo_cartao.border_color = Color(cor_bot, 0.4)
+			_fundo_cartao.draw(_desenho.get_canvas_item(), cartao)
 			_texto(fonte, Vector2(meio, cartao.position.y + 50), "Bot", 28, Color.WHITE)
 			Desenho.desenhar(_desenho, Transform2D(0.0, Vector2.ONE * 3.0, 0.0,
 				Vector2(meio, cartao.position.y + 170)), Color(cor_bot, 0.85), Vector2.LEFT, false, 0.0)
@@ -459,8 +466,7 @@ func _desenhar_vagas() -> void:
 			_texto(fonte, Vector2(meio, cartao.position.y + 290), Partida.CORES[indice]["nome"], 32, cor_bot.lightened(0.2))
 			_texto(fonte, Vector2(meio, cartao.position.y + 330), Partida.NOMES_DIFICULDADE[_dificuldade], 24, Ui.AMARELO)
 		else:
-			fundo.bg_color = Color(Ui.COR_PAINEL, 0.45)
-			fundo.draw(_desenho.get_canvas_item(), cartao)
+			_fundo_cartao_vazio.draw(_desenho.get_canvas_item(), cartao)
 			if _etapa == "entrar":
 				var piscar := 0.6 + 0.4 * sin(_tempo * 4.0)
 				_texto(fonte, Vector2(meio, cartao.position.y + 180), "Aperte golpe", 28, Color(1, 1, 1, piscar))

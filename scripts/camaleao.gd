@@ -238,7 +238,8 @@ func _physics_process(delta: float) -> void:
 	_controlar_invisibilidade(delta, apertou_invisivel, segurando_invisivel)
 	_mover_lingua(delta)
 	queue_redraw()
-	_desenho_lingua.queue_redraw()
+	if _estado_lingua != "":
+		_desenho_lingua.queue_redraw()
 
 
 ## Invisível: um toque no botão faz aparecer na hora.
