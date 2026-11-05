@@ -6,8 +6,9 @@ extends Node2D
 const DURACAO := 0.15
 
 var direcao := Vector2.RIGHT
-var alcance := 70.0
-var abertura := 1.3 # radianos para cada lado da direção
+var alcance := 95.0
+var abertura := 1.5 # radianos para cada lado da direção
+var alcance_colado := 50.0 # raio de eliminação colada (360 graus)
 var acertou := false
 var _tempo := 0.0
 
@@ -32,5 +33,9 @@ func _draw() -> void:
 	# O risco "varre" de um lado para o outro enquanto some.
 	var inicio := centro - abertura
 	var fim := lerpf(centro - abertura * 0.3, centro + abertura, minf(t * 2.0, 1.0))
-	draw_arc(Vector2.ZERO, alcance * 0.8, inicio, fim, 16, cor, 6.0, true)
-	draw_arc(Vector2.ZERO, alcance * 0.55, inicio, fim, 16, Color(cor, cor.a * 0.5), 3.0, true)
+	# Arco frontal no alcance real do golpe
+	draw_arc(Vector2.ZERO, alcance, inicio, fim, 20, cor, 6.0, true)
+	draw_arc(Vector2.ZERO, alcance * 0.7, inicio, fim, 16, Color(cor, cor.a * 0.45), 3.0, true)
+	# Área curta de acerto ao redor do camaleão (360 graus)
+	if alcance_colado > 0.0:
+		draw_arc(Vector2.ZERO, alcance_colado, 0.0, TAU, 24, Color(cor, cor.a * 0.4), 2.5, true)
