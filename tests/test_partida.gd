@@ -20,6 +20,7 @@ func run_tests() -> void:
 	test_constantes_tremor()
 	test_mecanica_tremor()
 	test_menu_pausa()
+	test_tela_fim_partida()
 
 func test_constantes_tremor() -> void:
 	assert_true(MainScript.FORCA_TREMOR > 0.0 and MainScript.FORCA_TREMOR <= 10.0,
@@ -68,5 +69,27 @@ func test_menu_pausa() -> void:
 	main.alternar_pausa()
 	assert_true(not tree.paused, "Despausar restaura o processamento normal (paused = false)")
 	assert_true(not menu.visible, "Menu de pausa torna-se oculto ao despausar")
+	
+	main.free()
+
+func test_tela_fim_partida() -> void:
+	var main: Node = MainScript.new()
+	var tree := Engine.get_main_loop() as SceneTree
+	tree.root.add_child(main)
+	main._ready()
+	
+	assert_true(main.get("_tela_fim_partida") != null, "Tela de fim de partida é instanciada no HUD")
+	var tela: Control = main.get("_tela_fim_partida")
+	assert_true(not tela.visible, "Tela de fim de partida inicia oculta")
+	
+	main._exibir_fim_partida(0)
+	assert_true(tela.visible, "Tela de fim de partida torna-se visível ao atingir limite")
+	var rotulo_vencedor: Label = main.get("_rotulo_vencedor")
+	assert_true(rotulo_vencedor.text.contains("venceu a partida"), "Nome e mensagem do vencedor são exibidos")
+	var container: VBoxContainer = main.get("_container_placar_final")
+	assert_true(container.get_child_count() > 0, "Resumo do placar final lista os participantes")
+	
+	main._ocultar_fim_partida()
+	assert_true(not tela.visible, "_ocultar_fim_partida oculta a tela de vitória")
 	
 	main.free()
