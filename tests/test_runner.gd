@@ -3,6 +3,8 @@ extends SceneTree
 ## Execute com: godot --headless --path . -s tests/test_runner.gd
 
 func _initialize() -> void:
+	await process_frame
+
 	print("\n==================================================")
 	print("  BedLion - Bateria de Testes Automatizados")
 	print("==================================================\n")

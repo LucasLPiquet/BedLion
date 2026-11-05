@@ -17,6 +17,7 @@ const Agua := preload("res://scripts/agua.gd")
 const GramaAlta := preload("res://scripts/grama_alta.gd")
 const Luz := preload("res://scripts/luz.gd")
 const Pistas := preload("res://scripts/pistas.gd")
+const Ui := preload("res://scripts/ui.gd")
 
 ## Tamanho da arena (em pixels do jogo). A janela continua do mesmo tamanho:
 ## o jogo é esticado para caber nela (veja _ready). Era 1280 x 720.
@@ -84,20 +85,26 @@ var _rotulo_mapa: Label
 var _rotulo_ajuda: Label
 var _camera: Camera2D
 var _tempo_tremor := 0.0
+var _menu_pausa: Control
+var _botao_pausa_continuar: Button
 
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_camera = Camera2D.new()
 	_camera.anchor_mode = Camera2D.ANCHOR_MODE_FIXED_TOP_LEFT
 	_camera.position = Vector2.ZERO
 	add_child(_camera)
 	_veio_do_lobby = not Partida.jogadores.is_empty()
 	_montar_hud()
-	Input.joy_connection_changed.connect(_ao_mudar_controles)
+	if not Input.joy_connection_changed.is_connected(_ao_mudar_controles):
+		Input.joy_connection_changed.connect(_ao_mudar_controles)
 	_nova_partida()
 
 
 func _process(delta: float) -> void:
+	if get_tree() and get_tree().paused:
+		return
 	if _tempo_tremor > 0.0:
 		_tempo_tremor = maxf(0.0, _tempo_tremor - delta)
 		var t := _tempo_tremor / DURACAO_TREMOR
@@ -111,13 +118,58 @@ func tremer_tela(duracao := DURACAO_TREMOR) -> void:
 	_tempo_tremor = duracao
 
 
+func _abrir_pausa() -> void:
+	if _partida_acabou or (_menu_pausa and _menu_pausa.visible):
+		return
+	if get_tree():
+		get_tree().paused = true
+	if _menu_pausa:
+		_menu_pausa.visible = true
+	if _botao_pausa_continuar:
+		_botao_pausa_continuar.grab_focus.call_deferred()
+
+
+func _fechar_pausa() -> void:
+	if not _menu_pausa or not _menu_pausa.visible:
+		return
+	_menu_pausa.visible = false
+	if get_tree():
+		get_tree().paused = false
+
+
+func alternar_pausa() -> void:
+	if _menu_pausa and _menu_pausa.visible:
+		_fechar_pausa()
+	else:
+		_abrir_pausa()
+
+
 func _unhandled_input(evento: InputEvent) -> void:
+	var e_pausa := false
+	if evento is InputEventKey:
+		var tecla := evento as InputEventKey
+		if tecla.pressed and not tecla.echo and (tecla.keycode == KEY_ESCAPE or tecla.keycode == KEY_P):
+			e_pausa = true
+	elif evento is InputEventJoypadButton:
+		var btn := evento as InputEventJoypadButton
+		if btn.pressed and btn.button_index == JOY_BUTTON_START:
+			e_pausa = true
+	elif get_tree().paused and evento.is_action_pressed("ui_cancel"):
+		e_pausa = true
+
+	if e_pausa:
+		if not _partida_acabou:
+			alternar_pausa()
+			get_viewport().set_input_as_handled()
+			return
+
+	if get_tree().paused:
+		return
+
 	var tecla := evento as InputEventKey
 	if not (tecla and tecla.pressed and not tecla.echo):
 		return
-	if tecla.keycode == KEY_ESCAPE:
-		Partida.ir_para(Partida.CENA_MENU)
-	elif tecla.keycode == KEY_F1 and not _veio_do_lobby:
+	if tecla.keycode == KEY_F1 and not _veio_do_lobby:
 		_modo_bot = (_modo_bot + 1) % MODOS_BOT.size()
 		_nova_partida()
 	elif tecla.keycode == KEY_F2 and not _veio_do_lobby:
@@ -203,6 +255,7 @@ func _criar_parede(retangulo: Rect2) -> void:
 
 func _montar_hud() -> void:
 	var hud := CanvasLayer.new()
+	hud.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(hud)
 
 	_placar = Placar.new()
@@ -218,6 +271,55 @@ func _montar_hud() -> void:
 
 	_rotulo_ajuda = _criar_rotulo(Vector2(0, TAMANHO.y - 32), 16, 5)
 	hud.add_child(_rotulo_ajuda)
+
+	_montar_menu_pausa(hud)
+
+
+func _montar_menu_pausa(hud: CanvasLayer) -> void:
+	_menu_pausa = Control.new()
+	_menu_pausa.process_mode = Node.PROCESS_MODE_ALWAYS
+	_menu_pausa.visible = false
+	hud.add_child(_menu_pausa)
+
+	var cortina := ColorRect.new()
+	cortina.size = TAMANHO
+	cortina.color = Color(0.02, 0.05, 0.02, 0.72)
+	cortina.mouse_filter = Control.MOUSE_FILTER_STOP
+	_menu_pausa.add_child(cortina)
+
+	var larg_painel := 460.0
+	var alt_painel := 430.0
+	var pos_painel := Vector2((TAMANHO.x - larg_painel) / 2.0, (TAMANHO.y - alt_painel) / 2.0)
+	var painel := Ui.painel(Rect2(pos_painel, Vector2(larg_painel, alt_painel)), Ui.AMARELO)
+	painel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_menu_pausa.add_child(painel)
+
+	var titulo := Ui.rotulo("Jogo Pausado", 44, Vector2(pos_painel.x, pos_painel.y + 36), larg_painel)
+	titulo.add_theme_color_override("font_color", Ui.AMARELO)
+	_menu_pausa.add_child(titulo)
+
+	var coluna := VBoxContainer.new()
+	coluna.add_theme_constant_override("separation", 18)
+	coluna.position = Vector2(pos_painel.x + (larg_painel - 340.0) / 2.0, pos_painel.y + 120.0)
+	_menu_pausa.add_child(coluna)
+
+	_botao_pausa_continuar = Ui.botao("Continuar", Vector2(340, 68), 30)
+	_botao_pausa_continuar.pressed.connect(_fechar_pausa)
+	coluna.add_child(_botao_pausa_continuar)
+
+	var botao_reiniciar := Ui.botao("Reiniciar Rodada", Vector2(340, 68), 28)
+	botao_reiniciar.pressed.connect(func() -> void:
+		_fechar_pausa()
+		_nova_rodada()
+	)
+	coluna.add_child(botao_reiniciar)
+
+	var botao_sair := Ui.botao("Sair para o Menu", Vector2(340, 68), 28)
+	botao_sair.pressed.connect(func() -> void:
+		_fechar_pausa()
+		Partida.ir_para(Partida.CENA_MENU)
+	)
+	coluna.add_child(botao_sair)
 
 
 func _criar_rotulo(posicao: Vector2, tamanho_fonte: int, contorno: int) -> Label:
@@ -274,11 +376,12 @@ func _escrever_ajuda() -> void:
 	if not _veio_do_lobby:
 		partes.append("F1: %s" % NOMES_MODO_BOT[_modo_bot])
 		partes.append("F2: próximo mapa")
-	partes.append("Esc: menu")
+	partes.append("Esc: pausa")
 	_rotulo_ajuda.text = "(golpe / invisível / língua)    " + "    |    ".join(partes)
 
 
 func _nova_partida() -> void:
+	_fechar_pausa()
 	_escolher_jogadores()
 	placar.clear()
 	for jogador in _jogadores:
@@ -289,6 +392,7 @@ func _nova_partida() -> void:
 
 
 func _nova_rodada() -> void:
+	_fechar_pausa()
 	if _rodada:
 		remove_child(_rodada)
 		_rodada.queue_free()

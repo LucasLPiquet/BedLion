@@ -19,6 +19,7 @@ func assert_true(condition: bool, message: String) -> void:
 func run_tests() -> void:
 	test_constantes_tremor()
 	test_mecanica_tremor()
+	test_menu_pausa()
 
 func test_constantes_tremor() -> void:
 	assert_true(MainScript.FORCA_TREMOR > 0.0 and MainScript.FORCA_TREMOR <= 10.0,
@@ -28,6 +29,8 @@ func test_constantes_tremor() -> void:
 
 func test_mecanica_tremor() -> void:
 	var main: Node = MainScript.new()
+	var tree := Engine.get_main_loop() as SceneTree
+	tree.root.add_child(main)
 	var cam := Camera2D.new()
 	cam.anchor_mode = Camera2D.ANCHOR_MODE_FIXED_TOP_LEFT
 	cam.position = Vector2.ZERO
@@ -44,5 +47,26 @@ func test_mecanica_tremor() -> void:
 	main._process(0.2)
 	assert_true(main.get("_tempo_tremor") == 0.0, "Tempo de tremor é zerado após decorrida a duração")
 	assert_true(cam.offset == Vector2.ZERO, "Posição da câmera é restaurada para a origem (offset zero)")
+	
+	main.free()
+
+func test_menu_pausa() -> void:
+	var main: Node = MainScript.new()
+	var tree := Engine.get_main_loop() as SceneTree
+	tree.root.add_child(main)
+	main._ready()
+	
+	assert_true(main.get("_menu_pausa") != null, "Menu de pausa é instanciado no HUD")
+	var menu: Control = main.get("_menu_pausa")
+	assert_true(not menu.visible, "Menu de pausa inicia oculto")
+	assert_true(not tree.paused, "Jogo inicia despausado")
+	
+	main.alternar_pausa()
+	assert_true(tree.paused, "Pausar o jogo congela o SceneTree (paused = true)")
+	assert_true(menu.visible, "Menu de pausa torna-se visível ao pausar")
+	
+	main.alternar_pausa()
+	assert_true(not tree.paused, "Despausar restaura o processamento normal (paused = false)")
+	assert_true(not menu.visible, "Menu de pausa torna-se oculto ao despausar")
 	
 	main.free()
