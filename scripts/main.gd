@@ -29,6 +29,10 @@ const PONTOS_PARA_VENCER := 5
 const PAUSA_FIM_RODADA := 2.0 # segundos mostrando quem ganhou a rodada
 const PAUSA_FIM_PARTIDA := 4.0
 
+## Tremor suave de tela na morte (kill) de um jogador ou bot.
+const FORCA_TREMOR := 4.5
+const DURACAO_TREMOR := 0.22
+
 ## Teclados que entram no jogo (tire um daqui se quiser jogar só com um).
 const TECLADOS := ["teclado1", "teclado2"]
 const MAX_JOGADORES := 4
@@ -78,13 +82,33 @@ var _placar: Placar
 var _rotulo_mensagem: Label
 var _rotulo_mapa: Label
 var _rotulo_ajuda: Label
+var _camera: Camera2D
+var _tempo_tremor := 0.0
 
 
 func _ready() -> void:
+	_camera = Camera2D.new()
+	_camera.anchor_mode = Camera2D.ANCHOR_MODE_FIXED_TOP_LEFT
+	_camera.position = Vector2.ZERO
+	add_child(_camera)
 	_veio_do_lobby = not Partida.jogadores.is_empty()
 	_montar_hud()
 	Input.joy_connection_changed.connect(_ao_mudar_controles)
 	_nova_partida()
+
+
+func _process(delta: float) -> void:
+	if _tempo_tremor > 0.0:
+		_tempo_tremor = maxf(0.0, _tempo_tremor - delta)
+		var t := _tempo_tremor / DURACAO_TREMOR
+		_camera.offset = Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * (FORCA_TREMOR * t * t)
+	elif is_instance_valid(_camera) and _camera.offset != Vector2.ZERO:
+		_camera.offset = Vector2.ZERO
+
+
+## Deslocamento rápido e suave da câmera ao ocorrer uma morte (kill).
+func tremer_tela(duracao := DURACAO_TREMOR) -> void:
+	_tempo_tremor = duracao
 
 
 func _unhandled_input(evento: InputEvent) -> void:
@@ -358,6 +382,7 @@ func _criar_upgrade(posicao: Vector2) -> void:
 
 
 func _ao_morrer(camaleao: Node) -> void:
+	tremer_tela()
 	_vivos.erase(camaleao)
 	if _rodada_acabou or _verificando_fim_rodada or _vivos.size() > 1:
 		return

@@ -7,10 +7,21 @@ func _initialize() -> void:
 	print("  BedLion - Bateria de Testes Automatizados")
 	print("==================================================\n")
 
+	# Inicializa nós de autoload quando o runner é executado como SceneTree direta
+	if not root.has_node("Partida"):
+		var no_partida = load("res://scripts/partida.gd").new()
+		no_partida.name = "Partida"
+		root.add_child(no_partida)
+	if not root.has_node("Controles"):
+		var no_controles = load("res://scripts/controles.gd").new()
+		no_controles.name = "Controles"
+		root.add_child(no_controles)
+
 	var suites := [
-		preload("res://tests/test_mapas.gd").new(),
-		preload("res://tests/test_linguas.gd").new(),
-		preload("res://tests/test_controles.gd").new(),
+		load("res://tests/test_mapas.gd").new(),
+		load("res://tests/test_linguas.gd").new(),
+		load("res://tests/test_controles.gd").new(),
+		load("res://tests/test_partida.gd").new(),
 	]
 
 	var total_passed := 0
