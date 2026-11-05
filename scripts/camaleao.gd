@@ -670,6 +670,7 @@ static func resolver_golpes_pendentes() -> void:
 		efeito.direcao = atacante.direcao
 		efeito.alcance = ALCANCE_GOLPE
 		efeito.abertura = ANGULO_GOLPE
+		efeito.alcance_colado = DISTANCIA_COLADO
 		efeito.acertou = acertou
 		if is_instance_valid(atacante.mundo):
 			atacante.mundo.add_child(efeito)
