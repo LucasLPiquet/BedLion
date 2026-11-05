@@ -18,6 +18,7 @@ const GramaAlta := preload("res://scripts/grama_alta.gd")
 const Luz := preload("res://scripts/luz.gd")
 const Pistas := preload("res://scripts/pistas.gd")
 const Ui := preload("res://scripts/ui.gd")
+const Desenho := preload("res://scripts/desenho_camaleao.gd")
 
 ## Tamanho da arena (em pixels do jogo). A janela continua do mesmo tamanho:
 ## o jogo é esticado para caber nela (veja _ready). Era 1280 x 720.
@@ -87,6 +88,12 @@ var _camera: Camera2D
 var _tempo_tremor := 0.0
 var _menu_pausa: Control
 var _botao_pausa_continuar: Button
+var _tela_fim_partida: Control
+var _rotulo_vencedor: Label
+var _desenho_vencedor: Node2D
+var _container_placar_final: VBoxContainer
+var _botao_fim_reiniciar: Button
+var _indice_vencedor := -1
 
 
 func _ready() -> void:
@@ -119,7 +126,7 @@ func tremer_tela(duracao := DURACAO_TREMOR) -> void:
 
 
 func _abrir_pausa() -> void:
-	if _partida_acabou or (_menu_pausa and _menu_pausa.visible):
+	if _partida_acabou or (_menu_pausa and _menu_pausa.visible) or (_tela_fim_partida and _tela_fim_partida.visible):
 		return
 	if get_tree():
 		get_tree().paused = true
@@ -273,6 +280,118 @@ func _montar_hud() -> void:
 	hud.add_child(_rotulo_ajuda)
 
 	_montar_menu_pausa(hud)
+	_montar_tela_fim_partida(hud)
+
+
+func _montar_tela_fim_partida(hud: CanvasLayer) -> void:
+	_tela_fim_partida = Control.new()
+	_tela_fim_partida.process_mode = Node.PROCESS_MODE_ALWAYS
+	_tela_fim_partida.visible = false
+	hud.add_child(_tela_fim_partida)
+
+	var cortina := ColorRect.new()
+	cortina.size = TAMANHO
+	cortina.color = Color(0.02, 0.05, 0.02, 0.8)
+	cortina.mouse_filter = Control.MOUSE_FILTER_STOP
+	_tela_fim_partida.add_child(cortina)
+
+	var larg_painel := 580.0
+	var alt_painel := 620.0
+	var pos_painel := Vector2((TAMANHO.x - larg_painel) / 2.0, (TAMANHO.y - alt_painel) / 2.0)
+	var painel := Ui.painel(Rect2(pos_painel, Vector2(larg_painel, alt_painel)), Ui.AMARELO)
+	painel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_tela_fim_partida.add_child(painel)
+
+	var titulo := Ui.rotulo("VITÓRIA!", 48, Vector2(pos_painel.x, pos_painel.y + 24), larg_painel)
+	titulo.add_theme_color_override("font_color", Ui.AMARELO)
+	_tela_fim_partida.add_child(titulo)
+
+	_rotulo_vencedor = Ui.rotulo("", 28, Vector2(pos_painel.x, pos_painel.y + 80), larg_painel)
+	_tela_fim_partida.add_child(_rotulo_vencedor)
+
+	_desenho_vencedor = Node2D.new()
+	_desenho_vencedor.position = Vector2(pos_painel.x + larg_painel / 2.0, pos_painel.y + 195.0)
+	_desenho_vencedor.draw.connect(_desenhar_vencedor)
+	_tela_fim_partida.add_child(_desenho_vencedor)
+
+	_container_placar_final = VBoxContainer.new()
+	_container_placar_final.add_theme_constant_override("separation", 6)
+	_container_placar_final.position = Vector2(pos_painel.x + 40.0, pos_painel.y + 265.0)
+	_container_placar_final.custom_minimum_size = Vector2(500, 120)
+	_tela_fim_partida.add_child(_container_placar_final)
+
+	var coluna_botoes := VBoxContainer.new()
+	coluna_botoes.add_theme_constant_override("separation", 14)
+	coluna_botoes.position = Vector2(pos_painel.x + (larg_painel - 360.0) / 2.0, pos_painel.y + 440.0)
+	_tela_fim_partida.add_child(coluna_botoes)
+
+	_botao_fim_reiniciar = Ui.botao("Jogar Novamente", Vector2(360, 64), 30)
+	_botao_fim_reiniciar.pressed.connect(func() -> void:
+		_ocultar_fim_partida()
+		_nova_partida()
+	)
+	coluna_botoes.add_child(_botao_fim_reiniciar)
+
+	if _veio_do_lobby:
+		var botao_lobby := Ui.botao("Voltar ao Lobby", Vector2(360, 56), 26)
+		botao_lobby.pressed.connect(func() -> void:
+			_ocultar_fim_partida()
+			Partida.ir_para(Partida.CENA_LOBBY)
+		)
+		coluna_botoes.add_child(botao_lobby)
+
+	var botao_menu := Ui.botao("Menu Principal", Vector2(360, 56) if _veio_do_lobby else Vector2(360, 64), 26)
+	botao_menu.pressed.connect(func() -> void:
+		_ocultar_fim_partida()
+		Partida.ir_para(Partida.CENA_MENU)
+	)
+	coluna_botoes.add_child(botao_menu)
+
+
+func _desenhar_vencedor() -> void:
+	if _indice_vencedor < 0 or _indice_vencedor >= _jogadores.size():
+		return
+	var cor: Color = _jogadores[_indice_vencedor]["cor"]
+	_desenho_vencedor.draw_set_transform(Vector2.ZERO)
+	Desenho.desenhar(_desenho_vencedor, Transform2D(0.0, Vector2.ONE * 3.6, 0.0, Vector2.ZERO),
+		cor, Vector2.RIGHT, true, 0.0)
+	_desenho_vencedor.draw_set_transform(Vector2.ZERO)
+
+
+func _exibir_fim_partida(vencedor: int) -> void:
+	_indice_vencedor = vencedor
+	var dados: Dictionary = _jogadores[vencedor]
+	var nome: String = dados["nome"]
+	var cor: Color = dados["cor"]
+	if dados.get("bot", "") != "":
+		_rotulo_vencedor.text = "%s (Bot) venceu a partida!" % nome
+	else:
+		_rotulo_vencedor.text = "%s venceu a partida!" % nome
+	_rotulo_vencedor.add_theme_color_override("font_color", cor.lightened(0.25))
+
+	for filho in _container_placar_final.get_children():
+		filho.queue_free()
+
+	for i in _jogadores.size():
+		var j: Dictionary = _jogadores[i]
+		var eh_vencedor := (i == vencedor)
+		var texto := "%s: %d pontos" % [j["nome"], placar[i]]
+		if str(j.get("bot", "")) != "":
+			texto += " (bot)"
+		if eh_vencedor:
+			texto += "  ★ VENCEDOR ★"
+		var rotulo_j := Ui.rotulo(texto, 20 if not eh_vencedor else 22, Vector2.ZERO, 500)
+		rotulo_j.add_theme_color_override("font_color", j["cor"] if not eh_vencedor else Ui.AMARELO)
+		_container_placar_final.add_child(rotulo_j)
+
+	_tela_fim_partida.visible = true
+	_desenho_vencedor.queue_redraw()
+	_botao_fim_reiniciar.grab_focus.call_deferred()
+
+
+func _ocultar_fim_partida() -> void:
+	if _tela_fim_partida:
+		_tela_fim_partida.visible = false
 
 
 func _montar_menu_pausa(hud: CanvasLayer) -> void:
@@ -382,6 +501,7 @@ func _escrever_ajuda() -> void:
 
 func _nova_partida() -> void:
 	_fechar_pausa()
+	_ocultar_fim_partida()
 	_escolher_jogadores()
 	placar.clear()
 	for jogador in _jogadores:
@@ -509,23 +629,25 @@ func _encerrar_rodada(rodada: int) -> void:
 		placar[vencedor] += 1
 		var nome: String = _jogadores[vencedor]["nome"]
 		if placar[vencedor] >= PONTOS_PARA_VENCER:
-			partida_acabou = true
 			_partida_acabou = true
 			_mostrar_mensagem("%s venceu a partida!" % nome, PAUSA_FIM_PARTIDA)
+			_atualizar_placar()
+			await _criar_temporizador(1.5).timeout
+			if not is_inside_tree() or rodada_que_acabou != _numero_rodada:
+				return
+			_exibir_fim_partida(vencedor)
+			return
 		else:
 			_mostrar_mensagem("%s ganhou a rodada!" % nome, PAUSA_FIM_RODADA)
 	else:
 		_mostrar_mensagem("Empate!", PAUSA_FIM_RODADA)
 	_atualizar_placar()
 
-	await _criar_temporizador(PAUSA_FIM_PARTIDA if partida_acabou else PAUSA_FIM_RODADA).timeout
+	await _criar_temporizador(PAUSA_FIM_RODADA).timeout
 	# Se no meio da espera a partida recomeçou (F1 ou controle novo) ou saiu da cena, não faz nada.
 	if not is_inside_tree() or rodada_que_acabou != _numero_rodada or not _rodada_acabou:
 		return
-	if partida_acabou:
-		_nova_partida()
-	else:
-		_nova_rodada()
+	_nova_rodada()
 
 
 func _mostrar_mensagem(texto: String, duracao: float) -> void:
