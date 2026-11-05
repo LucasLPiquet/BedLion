@@ -8,10 +8,14 @@ const Desenho := preload("res://scripts/desenho_camaleao.gd")
 var jogadores: Array = [] # cada um: {"nome": String, "cor": Color, "bot": String}
 var pontos: Array = []
 var meta := 5
+var _fundo_estilo: StyleBoxFlat
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fundo_estilo = StyleBoxFlat.new()
+	_fundo_estilo.bg_color = Color(0.05, 0.08, 0.05, 0.6)
+	_fundo_estilo.set_corner_radius_all(14)
 
 
 func atualizar(novos_jogadores: Array, novos_pontos: Array, nova_meta: int) -> void:
@@ -28,10 +32,7 @@ func _draw() -> void:
 	var total := largura_item * jogadores.size()
 	var inicio := (size.x - total) / 2.0
 
-	var fundo := StyleBoxFlat.new()
-	fundo.bg_color = Color(0.05, 0.08, 0.05, 0.6)
-	fundo.set_corner_radius_all(14)
-	fundo.draw(get_canvas_item(), Rect2(inicio - 8.0, 2.0, total + 8.0, 44.0))
+	_fundo_estilo.draw(get_canvas_item(), Rect2(inicio - 8.0, 2.0, total + 8.0, 44.0))
 
 	var fonte := ThemeDB.fallback_font
 	for i in jogadores.size():
